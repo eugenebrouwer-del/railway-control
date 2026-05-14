@@ -513,6 +513,7 @@ input[type=range].slider {
       <div class="cam-stud-strip"></div>
       <div class="cam-viewport">
 <img src="https://cam2.bigtrainset.com/?action=stream"
+     crossorigin="anonymous"
      style="width:100%;height:100%;object-fit:cover;display:block;"
      onerror="document.getElementById('ns2').style.opacity='1'">
         <div class="scanlines"></div>
@@ -526,7 +527,6 @@ input[type=range].slider {
       </div>
       <div class="cam-label">CAM 2 — Trackside</div>
       <div class="cam-live"><div class="live-dot"></div>LIVE</div>
-      <div class="cam-bottom"><span>LINESIDE</span><span id="tc2">--:--:--</span></div>
     </div>
 
   </div><!-- /cam-row -->
@@ -857,7 +857,6 @@ document.addEventListener('touchend',  () => dragging = false);
    or a WebRTC <video> element.
 ───────────────────────────────────────────────────── */
 const c1 = document.getElementById('cam1'), ctx1 = c1.getContext('2d');
-const c2 = document.getElementById('cam2'), ctx2 = c2.getContext('2d');
 
 function drawCam1(t) {
   const w=c1.width, h=c1.height;
@@ -881,44 +880,16 @@ function drawCam1(t) {
   for(let i=0;i<120;i++){ctx1.fillStyle=`rgba(255,255,255,${Math.random()*0.02})`;ctx1.fillRect(Math.random()*w,Math.random()*h,1,1);}
 }
 
-function drawCam2(t) {
-  const w=c2.width, h=c2.height;
-  const sky=ctx2.createLinearGradient(0,0,0,h*0.55);
-  sky.addColorStop(0,'#070d18'); sky.addColorStop(1,'#182030');
-  ctx2.fillStyle=sky; ctx2.fillRect(0,0,w,h);
-  ctx2.fillStyle='#1a2810'; ctx2.fillRect(0,h*0.55,w,h*0.45);
-  ctx2.fillStyle='#3a3020'; ctx2.fillRect(w*0.3,h*0.55,w*0.4,h*0.45);
-  ctx2.strokeStyle='#9a8a70'; ctx2.lineWidth=5;
-  ctx2.beginPath(); ctx2.moveTo(w*0.44,h*0.57); ctx2.lineTo(w*0.3,h); ctx2.stroke();
-  ctx2.beginPath(); ctx2.moveTo(w*0.56,h*0.57); ctx2.lineTo(w*0.7,h); ctx2.stroke();
-  ctx2.strokeStyle='#5a4a30'; ctx2.lineWidth=6;
-  for(let i=0;i<9;i++){const p=i/8,y=h*0.57+p*h*0.43,sp=p*0.14;ctx2.beginPath();ctx2.moveTo(w*(0.44-sp),y);ctx2.lineTo(w*(0.56+sp),y);ctx2.stroke();}
-  const sc=0.5+speed/100*0.6, tw=90*sc, th=60*sc, tx=w/2-tw/2, ty=h*0.22;
-  ctx2.fillStyle='#1a4a8a'; ctx2.fillRect(tx,ty,tw,th);
-  ctx2.fillStyle='#2a6ad0'; ctx2.fillRect(tx+5,ty+5,tw-10,th*0.45);
-  const gl=9*sc;
-  ctx2.fillStyle=`rgba(255,230,100,${0.7+0.3*Math.sin(t/200)})`;
-  ctx2.beginPath(); ctx2.arc(tx+tw*0.25,ty+th*0.72,gl,0,Math.PI*2); ctx2.fill();
-  ctx2.beginPath(); ctx2.arc(tx+tw*0.75,ty+th*0.72,gl,0,Math.PI*2); ctx2.fill();
-  // signal post
-  ctx2.strokeStyle='#666'; ctx2.lineWidth=3;
-  ctx2.beginPath(); ctx2.moveTo(w*0.83,h*0.32); ctx2.lineTo(w*0.83,h*0.65); ctx2.stroke();
-  ctx2.fillStyle=`rgba(255,50,40,${0.7+0.3*Math.sin(t/400)})`; ctx2.beginPath(); ctx2.arc(w*0.83,h*0.35,8,0,Math.PI*2); ctx2.fill();
-  ctx2.fillStyle='#1a3a10'; ctx2.beginPath(); ctx2.arc(w*0.83,h*0.46,8,0,Math.PI*2); ctx2.fill();
-  for(let i=0;i<120;i++){ctx2.fillStyle=`rgba(255,255,255,${Math.random()*0.02})`;ctx2.fillRect(Math.random()*w,Math.random()*h,1,1);}
-}
-
 let ft=0;
 function tick(){
   ft+=16;
   trainX+=trainDirSim*(speed*0.06);
   if(trainX>100){trainX=100;trainDirSim=1;}
   if(trainX<0){trainX=0;trainDirSim=-1;}
-  drawCam1(ft); drawCam2(ft);
+  drawCam1(ft);
   const now=new Date();
   const tc=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
   document.getElementById('tc1').textContent=tc;
-  document.getElementById('tc2').textContent=tc;
   document.getElementById('ns1').style.opacity='0';
   document.getElementById('ns2').style.opacity='0';
   requestAnimationFrame(tick);
