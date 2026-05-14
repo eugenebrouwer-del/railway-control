@@ -114,16 +114,26 @@ io.on('connection', socket => {
     return;
   });
 
-  // Visitor queue join
-  if (queue.length >= MAX_QUEUE) {
-    socket.emit('queue:full');
-    viewerCount--;
-    return;
-  }
-  queue.push(socket.id);
-  socket.emit('train:update', { speed: currentSpeed, direction: currentDir });
-  if (queue.length === 1) startSlot();
-  else broadcastState();
+// Wait briefly to see if this is the Pi registering
+  // before adding to the visitor queue
+  setTimeout(() => {
+    // If this socket already identified as the Pi, ignore it
+    if (piSocket && piSocket.id === socket.id) return;
+    // If socket already disconnected, ignore
+    if (!io.sockets.sockets.get(socket.id)) return;
+
+    // Visitor queue join
+    if (queue.length >= MAX_QUEUE) {
+      socket.emit('queue:full');
+      viewerCount--;
+      return;
+    }
+    queue.push(socket.id);
+    socket.emit('train:update', { speed: currentSpeed, direction: currentDir });
+    if (queue.length === 1) startSlot();
+    else broadcastState();
+  }, 1000);
+
 
   // Train control
   socket.on('train:control', ({ speed, direction }) => {
