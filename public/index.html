@@ -907,29 +907,7 @@ setActive(false);
    // ── Cam 2 snapshot polling ────────────────────────────────────
 // Fetches a fresh JPEG snapshot every 100ms instead of MJPEG stream
 // Works reliably through Cloudflare tunnels with no buffering
-(function() {
-  const img = document.getElementById('cam2feed');
-  const url = 'https://cam2.bigtrainset.com/?action=snapshot';
-  let active = true;
 
-  function fetchFrame() {
-    if (!active) return;
-    const src = url + '&t=' + Date.now(); // cache bust
-    const tmp = new Image();
-    tmp.onload = function() {
-      img.src = tmp.src;
-      document.getElementById('ns2').style.opacity = '0';
-      setTimeout(fetchFrame, 100); // 10fps
-    };
-    tmp.onerror = function() {
-      document.getElementById('ns2').style.opacity = '1';
-      setTimeout(fetchFrame, 2000); // retry after 2s on error
-    };
-    tmp.src = src;
-  }
-
-  fetchFrame();
-})();
 </script>
 </body>
 </html>
