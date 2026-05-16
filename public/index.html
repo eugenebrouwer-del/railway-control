@@ -512,9 +512,11 @@ input[type=range].slider {
     <div class="cam-tile">
       <div class="cam-stud-strip"></div>
       <div class="cam-viewport">
-<img src="https://cam2.bigtrainset.com/?action=stream"
-     style="width:100%;height:100%;object-fit:cover;display:block;"
-     onerror="document.getElementById('ns2').style.opacity='1'">
+<div id="cam2-container" style="width:100%;height:100%;position:relative;">
+  <img id="cam2feed" 
+       style="width:100%;height:100%;object-fit:cover;display:block;"
+       onerror="document.getElementById('ns2').style.opacity='1'">
+   </div>
         <div class="scanlines"></div>
         <div class="no-signal" id="ns2">
           <div class="ns-bars">
@@ -898,6 +900,32 @@ tick();
 /* Production mode — connected to real server via Socket.io */
 updateSpeed(0, false);
 setActive(false);
+   // ── Cam 2 snapshot polling ────────────────────────────────────
+// Fetches a fresh JPEG snapshot every 100ms instead of MJPEG stream
+// Works reliably through Cloudflare tunnels with no buffering
+(function() {
+  const img = document.getElementById('cam2feed');
+  const url = 'https://cam2.bigtrainset.com/?action=snapshot';
+  let active = true;
+
+  function fetchFrame() {
+    if (!active) return;
+    const src = url + '&t=' + Date.now(); // cache bust
+    const tmp = new Image();
+    tmp.onload = function() {
+      img.src = tmp.src;
+      document.getElementById('ns2').style.opacity = '0';
+      setTimeout(fetchFrame, 100); // 10fps
+    };
+    tmp.onerror = function() {
+      document.getElementById('ns2').style.opacity = '1';
+      setTimeout(fetchFrame, 2000); // retry after 2s on error
+    };
+    tmp.src = src;
+  }
+
+  fetchFrame();
+})();
 </script>
 </body>
 </html>
