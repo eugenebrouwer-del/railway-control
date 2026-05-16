@@ -513,9 +513,8 @@ input[type=range].slider {
       <div class="cam-stud-strip"></div>
       <div class="cam-viewport">
 <div id="cam2-container" style="width:100%;height:100%;position:relative;">
-  <img id="cam2feed" 
-       style="width:100%;height:100%;object-fit:cover;display:block;"
-       onerror="document.getElementById('ns2').style.opacity='1'">
+<img id="cam2feed"
+     style="width:100%;height:100%;object-fit:cover;display:block;">
    </div>
         <div class="scanlines"></div>
         <div class="no-signal" id="ns2">
@@ -805,8 +804,13 @@ socket.on('queue:state',      ({ queueLength, activeId, msLeft }) => {
   renderQueue(queueLength, /* myPos */ 2); // server should send myPosition per socket
   if (!isActive && msLeft > 0) startTimer(Math.ceil(msLeft / 1000));
 });
-socket.on('train:update',     ({ speed: s, direction: d }) => { updateSpeed(s, false); setDirection(d); });
-
+socket.on('train:update',     ({ speed: s, direction: d }) => { updateSpeed(s, false); setDirection(d); });socket.on('cam:frame', (data) => {
+  const img = document.getElementById('cam2feed');
+  if (img) {
+    img.src = 'data:' + data.type + ';base64,' + data.data;
+    document.getElementById('ns2').style.opacity = '0';
+  }
+});
 /* ─────────────────────────────────────────────────────
    CONTROLS
 ───────────────────────────────────────────────────── */
