@@ -117,7 +117,10 @@ io.on('connection', socket => {
     socket.on('pi:frame', (data) => {
       io.emit('cam:frame', data);
     });
-
+ socket.on('pi:frame1', (data) => {
+      io.emit('cam:frame1', data);
+    });
+    
     socket.on('disconnect', () => {
       piSocket = null;
       stopTrain();
