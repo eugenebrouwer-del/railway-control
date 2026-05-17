@@ -495,7 +495,13 @@ socket.on('cam:frame', (data) => {
   cam2feed.src = 'data:' + data.type + ';base64,' + data.data;
   ns2.style.opacity = '0';
 });
-
+socket.on('cam:frame1', (data) => {
+  const img = document.getElementById('cam1feed');
+  if (img) {
+    img.src = 'data:' + data.type + ';base64,' + data.data;
+    document.getElementById('ns1').style.opacity = '0';
+  }
+});
 // ── Controls ──────────────────────────────────────────────────
 speedSlider.addEventListener('input', () => {
   if (isActive) updateSpeed(+speedSlider.value);
