@@ -14,9 +14,10 @@
       --green:    #4caf50;
       --red:      #e53935;
       --blue:     #2196f3;
+      --yellow:   #ffeb3b;
       --text:     #e8e8f0;
       --muted:    #6b6b7e;
-      --track-h:  280px;
+      --track-h:  260px;
       --handle-r: 22px;
     }
 
@@ -131,8 +132,8 @@
       border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      padding: 12px;
-      gap: 10px;
+      padding: 10px;
+      gap: 8px;
       overflow-y: auto;
     }
 
@@ -141,14 +142,15 @@
       background: #0d0d0f;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 10px 12px;
+      padding: 8px 12px;
       text-align: center;
-      min-height: 64px;
+      min-height: 58px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 4px;
+      flex-shrink: 0;
     }
 
     .driver-info .label {
@@ -193,6 +195,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-shrink: 0;
     }
 
     .time-bar-wrap {
@@ -220,11 +223,11 @@
 
     /* ── Throttle section ── */
     .throttle-section {
-      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      flex-shrink: 0;
     }
 
     .throttle-header {
@@ -239,12 +242,10 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      flex: 1;
       width: 100%;
       justify-content: center;
     }
 
-    /* The actual throttle track */
     .throttle-track-wrap {
       position: relative;
       display: flex;
@@ -302,7 +303,6 @@
       background: #666;
     }
 
-    /* Notch marks on the right of track */
     .throttle-notches {
       position: absolute;
       right: -32px;
@@ -329,7 +329,6 @@
       background: var(--border);
     }
 
-    /* Up/down fine-tune buttons */
     .throttle-btns {
       display: flex;
       flex-direction: column;
@@ -353,13 +352,10 @@
 
     .th-btn:active { background: var(--amber-dim); border-color: var(--amber); }
 
-    /* Speed readout */
-    .speed-readout {
-      text-align: center;
-    }
+    .speed-readout { text-align: center; }
 
     .speed-num {
-      font-size: 2.8rem;
+      font-size: 2.6rem;
       font-weight: 800;
       line-height: 1;
       font-variant-numeric: tabular-nums;
@@ -376,11 +372,12 @@
     .dir-row {
       display: flex;
       gap: 8px;
+      flex-shrink: 0;
     }
 
     .dir-btn {
       flex: 1;
-      height: 42px;
+      height: 40px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: #0d0d0f;
@@ -404,28 +401,87 @@
       color: var(--red);
     }
 
+    /* ── Function buttons (lights + horn) ── */
+    .fn-section {
+      flex-shrink: 0;
+    }
+
+    .fn-header {
+      font-size: .65rem;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .fn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .fn-btn {
+      flex: 1;
+      height: 52px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0d0d0f;
+      color: var(--muted);
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      line-height: 1;
+    }
+
+    .fn-btn .fn-icon { font-size: 1.3rem; }
+
+    /* Lights on state */
+    .fn-btn.lights-on {
+      background: rgba(255,235,59,.12);
+      border-color: var(--yellow);
+      color: var(--yellow);
+      box-shadow: 0 0 12px rgba(255,235,59,.2);
+    }
+
+    /* Horn active state */
+    .fn-btn.horn-active {
+      background: rgba(245,166,35,.2);
+      border-color: var(--amber);
+      color: var(--amber);
+      box-shadow: 0 0 14px rgba(245,166,35,.35);
+      transform: scale(0.97);
+    }
+
     /* ── Queue status ── */
     .queue-section {
       background: #0d0d0f;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 10px 12px;
+      padding: 8px 12px;
       font-size: .78rem;
+      flex-shrink: 0;
     }
 
     .queue-section .q-row {
       display: flex;
       justify-content: space-between;
       color: var(--muted);
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
+    .queue-section .q-row:last-child { margin-bottom: 0; }
     .queue-section .q-row span { color: var(--text); font-weight: 600; }
 
     /* ── E-stop ── */
     .estop-btn {
       width: 100%;
-      height: 48px;
+      height: 44px;
       background: rgba(229,57,53,.1);
       border: 1px solid #6b1e1e;
       border-radius: 8px;
@@ -442,7 +498,7 @@
     .estop-btn:hover { background: rgba(229,57,53,.25); border-color: var(--red); }
     .estop-btn:active { background: rgba(229,57,53,.4); }
 
-    /* ── Overlay notifications ── */
+    /* ── Overlays ── */
     .overlay {
       position: fixed;
       inset: 0;
@@ -474,7 +530,7 @@
     .overlay-box h2   { font-size: 1.2rem; margin-bottom: 6px; }
     .overlay-box p    { font-size: .82rem; color: var(--muted); }
 
-    /* Inactivity warning toast */
+    /* Toast */
     .toast {
       position: fixed;
       bottom: 20px;
@@ -499,7 +555,8 @@
     .controls-disabled .throttle-track,
     .controls-disabled .throttle-handle,
     .controls-disabled .dir-btn,
-    .controls-disabled .th-btn {
+    .controls-disabled .th-btn,
+    .controls-disabled .fn-btn {
       opacity: .35;
       pointer-events: none;
     }
@@ -508,12 +565,11 @@
     @media (max-width: 640px) {
       main {
         grid-template-columns: 1fr;
-        grid-template-rows: 40% 1fr;
+        grid-template-rows: 38% 1fr;
       }
-
       .cameras { flex-direction: row; }
       .controls { border-left: none; border-top: 1px solid var(--border); }
-      :root { --track-h: 200px; }
+      :root { --track-h: 180px; }
     }
   </style>
 </head>
@@ -561,7 +617,7 @@
       <div class="city" id="driverCity"></div>
     </div>
 
-    <!-- Time remaining bar (only shown during active slot) -->
+    <!-- Time bar -->
     <div class="time-row" id="timeRow" style="display:none">
       <div class="time-bar-wrap">
         <div class="time-bar" id="timeBar"></div>
@@ -574,19 +630,16 @@
       <div class="throttle-header">Throttle</div>
       <div class="throttle-row">
 
-        <!-- Fine-tune buttons -->
         <div class="throttle-btns">
           <button class="th-btn" id="btnUp" title="Increase speed">▲</button>
           <button class="th-btn" id="btnDown" title="Decrease speed">▼</button>
         </div>
 
-        <!-- Vertical track -->
         <div class="throttle-track-wrap" id="throttleWrap">
           <div class="throttle-track" id="throttleTrack">
             <div class="throttle-fill" id="throttleFill"></div>
             <div class="throttle-handle" id="throttleHandle"></div>
           </div>
-          <!-- Notches -->
           <div class="throttle-notches">
             <div class="notch">100</div>
             <div class="notch">75</div>
@@ -596,14 +649,13 @@
           </div>
         </div>
 
-        <!-- Speed readout -->
         <div class="speed-readout">
           <div class="speed-num" id="speedNum">0</div>
           <div class="speed-unit">SPEED %</div>
         </div>
 
       </div>
-    </div><!-- /throttle-section -->
+    </div>
 
     <!-- Direction -->
     <div class="dir-row">
@@ -611,7 +663,22 @@
       <button class="dir-btn" id="btnRev">REV ◀</button>
     </div>
 
-    <!-- Queue status -->
+    <!-- Functions: Lights + Horn -->
+    <div class="fn-section">
+      <div class="fn-header">Functions</div>
+      <div class="fn-row">
+        <button class="fn-btn" id="btnLights">
+          <span class="fn-icon">💡</span>
+          <span id="lightsLabel">LIGHTS OFF</span>
+        </button>
+        <button class="fn-btn" id="btnHorn">
+          <span class="fn-icon">📯</span>
+          <span>HORN</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Queue -->
     <div class="queue-section" id="queueSection">
       <div class="q-row">Position <span id="qPos">—</span></div>
       <div class="q-row">Queue <span id="qLen">—</span></div>
@@ -621,10 +688,10 @@
     <!-- E-stop -->
     <button class="estop-btn" id="estopBtn">⚡ Emergency Stop</button>
 
-  </div><!-- /controls -->
+  </div>
 </main>
 
-<!-- Inactivity warning toast -->
+<!-- Toast -->
 <div class="toast" id="inactivityToast">⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s</div>
 
 <!-- Overlays -->
@@ -640,7 +707,7 @@
   <div class="overlay-box">
     <div class="icon">🟢</div>
     <h2>Your turn!</h2>
-    <p>You have 2 minutes to drive the train.<br>Use the throttle to control speed.</p>
+    <p>You have 2 minutes to drive.<br>Use the throttle to control speed.</p>
   </div>
 </div>
 
@@ -666,88 +733,187 @@
 let speed       = 0;
 let direction   = 'fwd';
 let isMyTurn    = false;
+let lightsOn    = false;
 let slotEndTime = 0;
 let timerTick   = null;
 let inactivityCountdown = null;
+let hornSound   = null;
 const SLOT_MS   = 120_000;
 
-const socket    = io();
+const socket = io();
 
 // ── DOM refs ──────────────────────────────────────────────────────
-const piDot          = document.getElementById('piDot');
-const piLabel        = document.getElementById('piLabel');
-const viewerCount    = document.getElementById('viewerCount');
-const driverInfo     = document.getElementById('driverInfo');
-const driverLabel    = document.getElementById('driverLabel');
+const piDot            = document.getElementById('piDot');
+const piLabel          = document.getElementById('piLabel');
+const viewerCount      = document.getElementById('viewerCount');
+const driverLabel      = document.getElementById('driverLabel');
 const driverCountryRow = document.getElementById('driverCountryRow');
-const driverFlag     = document.getElementById('driverFlag');
-const driverCountry  = document.getElementById('driverCountry');
-const driverCity     = document.getElementById('driverCity');
-const timeRow        = document.getElementById('timeRow');
-const timeBar        = document.getElementById('timeBar');
-const timeLabel      = document.getElementById('timeLabel');
-const speedNum       = document.getElementById('speedNum');
-const throttleTrack  = document.getElementById('throttleTrack');
-const throttleFill   = document.getElementById('throttleFill');
-const throttleHandle = document.getElementById('throttleHandle');
-const btnFwd         = document.getElementById('btnFwd');
-const btnRev         = document.getElementById('btnRev');
-const btnUp          = document.getElementById('btnUp');
-const btnDown        = document.getElementById('btnDown');
-const qPos           = document.getElementById('qPos');
-const qLen           = document.getElementById('qLen');
-const qWait          = document.getElementById('qWait');
-const controlPanel   = document.getElementById('controlPanel');
-const estopBtn       = document.getElementById('estopBtn');
-const inactivityToast = document.getElementById('inactivityToast');
-const inactivityCount = document.getElementById('inactivityCount');
-
-// Overlays
+const driverFlag       = document.getElementById('driverFlag');
+const driverCountry    = document.getElementById('driverCountry');
+const driverCity       = document.getElementById('driverCity');
+const timeRow          = document.getElementById('timeRow');
+const timeBar          = document.getElementById('timeBar');
+const timeLabel        = document.getElementById('timeLabel');
+const speedNum         = document.getElementById('speedNum');
+const throttleTrack    = document.getElementById('throttleTrack');
+const throttleFill     = document.getElementById('throttleFill');
+const throttleHandle   = document.getElementById('throttleHandle');
+const btnFwd           = document.getElementById('btnFwd');
+const btnRev           = document.getElementById('btnRev');
+const btnUp            = document.getElementById('btnUp');
+const btnDown          = document.getElementById('btnDown');
+const btnLights        = document.getElementById('btnLights');
+const btnHorn          = document.getElementById('btnHorn');
+const lightsLabel      = document.getElementById('lightsLabel');
+const qPos             = document.getElementById('qPos');
+const qLen             = document.getElementById('qLen');
+const qWait            = document.getElementById('qWait');
+const controlPanel     = document.getElementById('controlPanel');
+const estopBtn         = document.getElementById('estopBtn');
+const inactivityToast  = document.getElementById('inactivityToast');
+const inactivityCount  = document.getElementById('inactivityCount');
 const overlayWaiting   = document.getElementById('overlayWaiting');
 const overlayWaitMsg   = document.getElementById('overlayWaitMsg');
 const overlayYourTurn  = document.getElementById('overlayYourTurn');
 const overlaySlotEnded = document.getElementById('overlaySlotEnded');
 const overlayPiOffline = document.getElementById('overlayPiOffline');
+const cam1img          = document.getElementById('cam1');
+const cam1offline      = document.getElementById('cam1offline');
+const cam2img          = document.getElementById('cam2');
+const cam2offline      = document.getElementById('cam2offline');
 
-// ── Throttle control (drag + pointer events) ──────────────────────
+// ── Train Horn — Web Audio synthesizer ───────────────────────────
+// Classic train horn chord (simplified K5LA): Eb, F#, Bb, Db
+const HORN_FREQS = [311, 370, 466, 554];
+
+function startHorn() {
+  if (hornSound) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Master gain with attack
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.08);
+
+    // Warmth filter — low-pass to take the edge off sawtooth
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 900;
+    filter.Q.value = 1.2;
+
+    // Slight reverb via a short delay
+    const delay = ctx.createDelay(0.05);
+    delay.delayTime.value = 0.03;
+    const delayGain = ctx.createGain();
+    delayGain.gain.value = 0.18;
+    master.connect(delay);
+    delay.connect(delayGain);
+    delayGain.connect(filter);
+
+    master.connect(filter);
+    filter.connect(ctx.destination);
+
+    // One oscillator per frequency, slightly detuned for richness
+    const oscs = HORN_FREQS.map((freq, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq + (i % 2 === 0 ? 1.5 : -1.5); // slight detune
+      const oscGain = ctx.createGain();
+      oscGain.gain.value = 0.6 / HORN_FREQS.length;
+      osc.connect(oscGain);
+      oscGain.connect(master);
+      osc.start();
+      return osc;
+    });
+
+    hornSound = { ctx, master, oscs };
+  } catch (e) {
+    console.warn('Web Audio not available:', e);
+  }
+}
+
+function stopHorn() {
+  if (!hornSound) return;
+  try {
+    const { ctx, master, oscs } = hornSound;
+    // Release envelope
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
+    setTimeout(() => {
+      oscs.forEach(o => { try { o.stop(); } catch(e){} });
+      ctx.close();
+    }, 300);
+  } catch (e) {}
+  hornSound = null;
+}
+
+// ── Horn button — press and hold ──────────────────────────────────
+function hornOn() {
+  if (!isMyTurn) return;
+  btnHorn.classList.add('horn-active');
+  startHorn();
+  socket.emit('train:function', { fn: 'horn', state: true });
+}
+
+function hornOff() {
+  btnHorn.classList.remove('horn-active');
+  stopHorn();
+  if (isMyTurn) socket.emit('train:function', { fn: 'horn', state: false });
+}
+
+btnHorn.addEventListener('pointerdown', (e) => { e.preventDefault(); hornOn(); });
+btnHorn.addEventListener('pointerup',   () => hornOff());
+btnHorn.addEventListener('pointerleave',() => hornOff());
+btnHorn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// ── Lights button — toggle ────────────────────────────────────────
+btnLights.addEventListener('click', () => {
+  if (!isMyTurn) return;
+  lightsOn = !lightsOn;
+  updateLightsUI();
+  socket.emit('train:function', { fn: 'lights', state: lightsOn });
+});
+
+function updateLightsUI() {
+  if (lightsOn) {
+    btnLights.classList.add('lights-on');
+    lightsLabel.textContent = 'LIGHTS ON';
+  } else {
+    btnLights.classList.remove('lights-on');
+    lightsLabel.textContent = 'LIGHTS OFF';
+  }
+}
+
+// ── Throttle drag ─────────────────────────────────────────────────
 function trackHeight() {
   return throttleTrack.getBoundingClientRect().height;
 }
 
 function setSpeedFromY(clientY) {
   const rect = throttleTrack.getBoundingClientRect();
-  const h    = rect.height;
-  let   pct  = (rect.bottom - clientY) / h; // bottom = 0, top = 1
+  let pct = (rect.bottom - clientY) / rect.height;
   pct = Math.max(0, Math.min(1, pct));
   setSpeed(Math.round(pct * 100));
 }
 
 function updateHandlePosition() {
   const h   = trackHeight();
-  // Handle positioned from bottom; at speed=0 handle is at bottom
   const pct = speed / 100;
-  // bottom property: 0 puts handle centre at bottom, h puts it at top
-  const bottom = pct * (h - 2); // slight inset so handle doesn't overflow
-  throttleHandle.style.bottom = `${bottom}px`;
+  throttleHandle.style.bottom = `${pct * (h - 2)}px`;
+  throttleFill.style.height   = `${pct * 100}%`;
 
-  // Fill
-  throttleFill.style.height = `${pct * 100}%`;
-
-  // Colour gradient
   let color;
   if (speed === 0)       color = '#333';
   else if (speed < 35)   color = '#4caf50';
   else if (speed < 70)   color = '#f5a623';
   else                   color = '#e53935';
 
-  throttleFill.style.background  = color;
+  throttleFill.style.background   = color;
   throttleHandle.style.background = speed === 0 ? '#d0d0e0' : color;
-  throttleHandle.style.boxShadow  = speed > 0
-    ? `0 0 10px ${color}88`
-    : '';
-
-  // Speed readout colour
-  speedNum.style.color = color;
+  throttleHandle.style.boxShadow  = speed > 0 ? `0 0 10px ${color}88` : '';
+  speedNum.style.color             = color;
 }
 
 function setSpeed(v) {
@@ -773,24 +939,27 @@ document.addEventListener('pointermove', (e) => {
 
 document.addEventListener('pointerup', () => { dragging = false; });
 
-// Click anywhere on track
 throttleTrack.addEventListener('pointerdown', (e) => {
   if (!isMyTurn || e.target === throttleHandle) return;
   setSpeedFromY(e.clientY);
 });
 
-// Fine-tune buttons
 btnUp.addEventListener('click',   () => { if (isMyTurn) setSpeed(speed + 5); });
 btnDown.addEventListener('click', () => { if (isMyTurn) setSpeed(speed - 5); });
 
-// Keyboard support
 document.addEventListener('keydown', (e) => {
   if (!isMyTurn) return;
-  if (e.key === 'ArrowUp')   { e.preventDefault(); setSpeed(speed + 5); }
-  if (e.key === 'ArrowDown') { e.preventDefault(); setSpeed(speed - 5); }
-  if (e.key === 'ArrowLeft') { e.preventDefault(); setDirection('rev'); }
-  if (e.key === 'ArrowRight'){ e.preventDefault(); setDirection('fwd'); }
-  if (e.key === ' ')         { e.preventDefault(); setSpeed(0); }
+  if (e.key === 'ArrowUp')    { e.preventDefault(); setSpeed(speed + 5); }
+  if (e.key === 'ArrowDown')  { e.preventDefault(); setSpeed(speed - 5); }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); setDirection('rev'); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); setDirection('fwd'); }
+  if (e.key === ' ')          { e.preventDefault(); setSpeed(0); }
+  if (e.key === 'h' || e.key === 'H') { hornOn(); }
+  if (e.key === 'l' || e.key === 'L') { btnLights.click(); }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'h' || e.key === 'H') hornOff();
 });
 
 // ── Direction ─────────────────────────────────────────────────────
@@ -804,7 +973,6 @@ function setDirection(dir) {
 btnFwd.addEventListener('click', () => { if (isMyTurn) setDirection('fwd'); });
 btnRev.addEventListener('click', () => { if (isMyTurn) setDirection('rev'); });
 
-// ── Send to server ────────────────────────────────────────────────
 function sendControl() {
   if (!isMyTurn) return;
   socket.emit('train:control', { speed, direction });
@@ -814,6 +982,7 @@ function sendControl() {
 estopBtn.addEventListener('click', () => {
   if (!isMyTurn) return;
   setSpeed(0);
+  hornOff();
 });
 
 // ── Time bar ──────────────────────────────────────────────────────
@@ -821,20 +990,19 @@ function startTimeBar(durationMs, msLeft) {
   slotEndTime = Date.now() + msLeft;
   clearInterval(timerTick);
   timeRow.style.display = 'flex';
-
   timerTick = setInterval(() => {
     const left = slotEndTime - Date.now();
     if (left <= 0) { clearInterval(timerTick); timeRow.style.display = 'none'; return; }
     const pct = (left / durationMs) * 100;
-    timeBar.style.width  = pct + '%';
-    timeBar.style.background = left < 15000 ? '#e53935' : left < 30000 ? '#f5a623' : '#f5a623';
+    timeBar.style.width      = pct + '%';
+    timeBar.style.background = left < 15000 ? '#e53935' : '#f5a623';
     const s = Math.ceil(left / 1000);
     const m = Math.floor(s / 60);
     timeLabel.textContent = `${m}:${String(s % 60).padStart(2,'0')}`;
   }, 500);
 }
 
-// ── Driver info display ───────────────────────────────────────────
+// ── Driver info ───────────────────────────────────────────────────
 function showDriver(country, isMe) {
   if (!country || country.code === 'XX') {
     driverLabel.textContent = 'Now driving';
@@ -842,15 +1010,14 @@ function showDriver(country, isMe) {
     driverCity.textContent = '';
     return;
   }
-
   driverLabel.innerHTML = isMe
     ? '<span class="your-turn-badge">YOU ARE DRIVING</span>'
     : 'Now driving';
-
   const cc = country.code.toLowerCase();
   driverFlag.src = `https://flagcdn.com/32x24/${cc}.png`;
   driverFlag.alt = country.code;
-  driverFlag.onerror = () => { driverFlag.style.display='none'; };
+  driverFlag.onerror = () => { driverFlag.style.display = 'none'; };
+  driverFlag.style.display = '';
   driverCountry.textContent = country.name;
   driverCountryRow.style.display = 'flex';
   driverCity.textContent = country.city || '';
@@ -868,15 +1035,29 @@ function hideAllOverlays() {
     .forEach(o => o.classList.remove('visible'));
 }
 
+// ── Controls enable/disable ───────────────────────────────────────
+function setControlsEnabled(enabled) {
+  if (enabled) {
+    controlPanel.classList.remove('controls-disabled');
+    hideAllOverlays();
+  } else {
+    controlPanel.classList.add('controls-disabled');
+    // Reset function states
+    lightsOn = false;
+    updateLightsUI();
+    hornOff();
+  }
+}
+
 // ── Socket events ─────────────────────────────────────────────────
 socket.on('pi:connected', () => {
-  piDot.className  = 'dot green';
+  piDot.className = 'dot green';
   piLabel.textContent = 'Pi online';
   overlayPiOffline.classList.remove('visible');
 });
 
 socket.on('pi:disconnected', () => {
-  piDot.className  = 'dot red';
+  piDot.className = 'dot red';
   piLabel.textContent = 'Pi offline';
   showOverlay(overlayPiOffline);
   setControlsEnabled(false);
@@ -902,8 +1083,6 @@ socket.on('queue:slotended', () => {
 
 socket.on('queue:state', (data) => {
   viewerCount.textContent = data.viewerCount;
-
-  // Queue info
   const pos  = data.myPosition;
   const len  = data.queueLength;
   const wait = data.activeId
@@ -913,7 +1092,6 @@ socket.on('queue:state', (data) => {
   qLen.textContent  = len;
   qWait.textContent = wait > 0 ? `~${wait} min` : 'Soon';
 
-  // Current driver country (for viewers)
   if (!isMyTurn) {
     if (data.activeDriver) {
       showDriver(data.activeDriver, false);
@@ -922,18 +1100,12 @@ socket.on('queue:state', (data) => {
       driverCountryRow.style.display = 'none';
       driverLabel.textContent = 'No active driver';
     }
-    // Show waiting overlay if not your turn
     overlayWaitMsg.textContent = `Position ${pos} of ${len}`;
     if (!overlayYourTurn.classList.contains('visible') &&
         !overlaySlotEnded.classList.contains('visible') &&
         !overlayPiOffline.classList.contains('visible')) {
       showOverlay(overlayWaiting);
     }
-  }
-
-  // Update time bar even if not driving (show driver's remaining time)
-  if (isMyTurn && data.msLeft > 0) {
-    // already running
   }
 });
 
@@ -944,18 +1116,17 @@ socket.on('queue:full', () => {
 
 socket.on('queue:estop', () => {
   setSpeed(0);
+  hornOff();
   isMyTurn = false;
   setControlsEnabled(false);
 });
 
 socket.on('queue:notactive', () => {
-  // Server rejected our command — silently reset
   isMyTurn = false;
   setControlsEnabled(false);
 });
 
 socket.on('train:update', (data) => {
-  // Reflect state broadcast from server (for viewers)
   if (!isMyTurn) {
     speed = data.speed;
     direction = data.direction;
@@ -966,12 +1137,10 @@ socket.on('train:update', (data) => {
   }
 });
 
-// ── Inactivity warnings ───────────────────────────────────────────
 socket.on('train:inactivity-warning', (data) => {
   let count = data.secondsLeft || 10;
   inactivityCount.textContent = count;
   inactivityToast.classList.add('show');
-
   clearInterval(inactivityCountdown);
   inactivityCountdown = setInterval(() => {
     count--;
@@ -986,10 +1155,8 @@ socket.on('train:inactivity-warning', (data) => {
 socket.on('train:inactivity-stop', () => {
   inactivityToast.classList.remove('show');
   clearInterval(inactivityCountdown);
-  // Train stopped by server — reset throttle
   setSpeed(0);
-  speedNum.textContent = '0';
-  // Show brief toast
+  hornOff();
   inactivityToast.textContent = '⏸ Train stopped — move throttle to resume';
   inactivityToast.classList.add('show');
   setTimeout(() => {
@@ -998,12 +1165,6 @@ socket.on('train:inactivity-stop', () => {
       '⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s';
   }, 3000);
 });
-
-// ── Camera feeds ──────────────────────────────────────────────────
-const cam1img     = document.getElementById('cam1');
-const cam1offline = document.getElementById('cam1offline');
-const cam2img     = document.getElementById('cam2');
-const cam2offline = document.getElementById('cam2offline');
 
 socket.on('cam:frame1', (data) => {
   cam1img.src = `data:image/jpeg;base64,${data.data}`;
@@ -1017,17 +1178,9 @@ socket.on('cam:frame', (data) => {
   cam2offline.style.display = 'none';
 });
 
-// ── Controls enable/disable ───────────────────────────────────────
-function setControlsEnabled(enabled) {
-  if (enabled) {
-    controlPanel.classList.remove('controls-disabled');
-    hideAllOverlays();
-  } else {
-    controlPanel.classList.add('controls-disabled');
-  }
-}
+socket.on('ping', () => socket.emit('pong'));
 
-// Start disabled
+// Init
 setControlsEnabled(false);
 updateHandlePosition();
 piDot.className = 'dot red';
