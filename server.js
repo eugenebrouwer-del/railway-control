@@ -7,7 +7,8 @@
 const express = require('express');
 const http    = require('http');
 const { Server } = require('socket.io');
-const geoip  = require('geoip-lite');
+let geoip;
+try { geoip = require('geoip-lite'); } catch(e) { console.warn('geoip-lite not available — country detection disabled'); }
 const fs     = require('fs');
 const path   = require('path');
 
