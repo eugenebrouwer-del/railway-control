@@ -1,565 +1,1036 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Railway Control — bigtrainset.com</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-<script src="https://bigtrainset.com/socket.io/socket.io.js"></script>
-<style>
-/* ── Reset & root ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --stud: 28px;
-  --panel-bg: #c8c0b2;
-  --panel-border: #9a9080;
-  --brick-dark: #1a2535;
-  --brick-mid: #2e3f56;
-  --accent-blue: #1f5fa6;
-  --accent-gold: #f0b429;
-  --accent-red: #c0392b;
-  --accent-green: #27ae60;
-  --stud-hi: rgba(255,255,255,0.45);
-  --stud-sh: rgba(0,0,0,0.35);
-  --page-bg: #080e18;
-}
-html, body { min-height: 100%; background: var(--page-bg); color: #fff; font-family: 'Share Tech Mono', monospace; overflow-x: hidden; }
-body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(31,95,166,0.18) 1px, transparent 1px); background-size: 32px 32px; animation: bgdrift 40s linear infinite; }
-@keyframes bgdrift { to { background-position: 32px 32px; } }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Big Train Set — Live Control</title>
+  <style>
+    :root {
+      --bg:       #0d0d0f;
+      --surface:  #18181c;
+      --border:   #2a2a32;
+      --amber:    #f5a623;
+      --amber-dim:#8a5e14;
+      --green:    #4caf50;
+      --red:      #e53935;
+      --blue:     #2196f3;
+      --text:     #e8e8f0;
+      --muted:    #6b6b7e;
+      --track-h:  280px;
+      --handle-r: 22px;
+    }
 
-/* ── Top bar ── */
-.topbar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: rgba(10,16,28,0.92); border-bottom: 1px solid rgba(240,180,41,0.2); backdrop-filter: blur(8px); }
-.topbar-logo { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 900; letter-spacing: 4px; color: var(--accent-gold); text-shadow: 0 0 20px rgba(240,180,41,0.4); display: flex; align-items: center; gap: 10px; }
-.topbar-logo::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-gold); box-shadow: 0 0 12px rgba(240,180,41,0.9); animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
-.topbar-stats { display: flex; gap: 20px; align-items: center; }
-.stat-pill { font-size: 10px; letter-spacing: 1px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 6px; }
-.stat-pill strong { color: #fff; font-size: 12px; }
-.stat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 8px rgba(39,174,96,0.8); animation: pulse 1.8s ease-in-out infinite; }
-.stat-dot.amber { background: var(--accent-gold); box-shadow: 0 0 8px rgba(240,180,41,0.8); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Page ── */
-.page { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding: 20px 16px 40px; gap: 16px; max-width: 900px; margin: 0 auto; }
-.page > * { opacity: 0; transform: translateY(12px); animation: fadeUp 0.5s ease forwards; }
-.page > *:nth-child(1) { animation-delay: 0.05s; }
-.page > *:nth-child(2) { animation-delay: 0.15s; }
-.page > *:nth-child(3) { animation-delay: 0.28s; }
-@keyframes fadeUp { to { opacity: 1; transform: none; } }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-/* ── Stud texture ── */
-.studs { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; background-image: radial-gradient(circle 5px at 14px 14px, var(--stud-hi) 40%, transparent 70%), radial-gradient(circle 5px at 14px 14px, var(--stud-sh) 60%, transparent 80%); background-size: var(--stud) var(--stud); opacity: 0.5; z-index: 0; }
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
 
-/* ── Camera row ── */
-.cam-row { display: flex; gap: 12px; width: 100%; }
-.cam-tile { flex: 1; position: relative; border-radius: 12px; overflow: hidden; background: #050b14; box-shadow: 0 4px 0 rgba(0,0,0,0.6), 0 0 0 3px #1a2535; }
-.cam-stud-strip { height: 22px; background: var(--panel-bg); background-image: radial-gradient(circle 4px at 14px 11px, var(--stud-hi) 40%, transparent 70%), radial-gradient(circle 4px at 14px 11px, var(--stud-sh) 60%, transparent 80%); background-size: 28px 22px; }
-.cam-viewport { position: relative; width: 100%; aspect-ratio: 16/9; background: #030810; overflow: hidden; }
-.cam-viewport img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cam-viewport::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0,0,0,0.7) 100%); }
-.scanlines { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 3px); }
-.cam-label { position: absolute; top: 28px; left: 10px; z-index: 5; font-family: 'Orbitron', sans-serif; font-size: 9px; letter-spacing: 2px; color: rgba(255,255,255,0.6); text-transform: uppercase; background: rgba(0,0,0,0.55); padding: 2px 8px; border-radius: 4px; }
-.cam-live { position: absolute; top: 30px; right: 10px; z-index: 5; display: flex; align-items: center; gap: 5px; font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 1px; color: #e74c3c; }
-.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; box-shadow: 0 0 6px rgba(231,76,60,0.9); animation: blink 1.2s ease-in-out infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
-.cam-bottom { height: 20px; background: #1a2535; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; }
-.cam-bottom span { font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 1px; }
-.no-signal { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: #030810; transition: opacity 0.5s; }
-.ns-bars { display: flex; gap: 3px; align-items: flex-end; height: 28px; }
-.ns-bars div { width: 5px; border-radius: 2px; background: rgba(255,255,255,0.12); }
-.no-signal span { font-family: 'Orbitron', sans-serif; font-size: 9px; letter-spacing: 2px; color: rgba(255,255,255,0.2); }
+    header h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      color: var(--amber);
+      flex: 1;
+    }
 
-/* ── Control panel ── */
-.panel { position: relative; width: 100%; background: var(--panel-bg); border-radius: 16px; padding: 16px; box-shadow: 0 2px 0 #fff inset, 0 -3px 0 rgba(0,0,0,0.3) inset, 0 24px 60px rgba(0,0,0,0.7), 0 0 0 3px var(--panel-border); }
-.panel::before { content: ''; position: absolute; inset: 0; border-radius: 16px; pointer-events: none; background: repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(0,0,0,0.04) 27px, rgba(0,0,0,0.04) 28px), repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(0,0,0,0.04) 27px, rgba(0,0,0,0.04) 28px); }
-.tile { position: relative; border-radius: 10px; padding: 12px; z-index: 1; }
-.tile-dark { background: var(--brick-dark); box-shadow: 0 3px 0 rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.07) inset; }
-.tile-blue { background: var(--accent-blue); box-shadow: 0 3px 0 rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.15) inset; }
-.tile-mid  { background: var(--brick-mid);  box-shadow: 0 3px 0 rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.1) inset; }
-.row { display: flex; gap: 10px; margin-bottom: 10px; position: relative; z-index: 1; }
-.row:last-child { margin-bottom: 0; }
-.lbl { font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 2px; color: rgba(255,255,255,0.45); text-transform: uppercase; margin-bottom: 4px; }
-.header-strip { position: relative; z-index: 1; background: var(--accent-gold); border-radius: 8px; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; box-shadow: 0 3px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.4) inset; }
-.header-strip::before, .header-strip::after { content: ''; display: block; width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(145deg, rgba(255,255,255,0.6) 0%, transparent 60%), #d4960a; box-shadow: 0 2px 0 rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.5); }
-.header-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 4px; color: #3d2600; text-transform: uppercase; }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #0d0d0f;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: .72rem;
+      color: var(--muted);
+    }
 
-/* ── Dial ── */
-.dial-wrap { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.dial-outer { width: 116px; height: 116px; border-radius: 50%; background: radial-gradient(circle at 38% 35%, #3a3a3a, #111); box-shadow: 0 6px 0 rgba(0,0,0,0.6), 0 0 0 4px #555, 0 0 0 6px #333, inset 0 2px 4px rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; position: relative; cursor: grab; }
-.dial-outer::before { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: repeating-conic-gradient(transparent 0deg, transparent 10deg, rgba(255,255,255,0.1) 10deg, rgba(255,255,255,0.1) 11deg); }
-.dial-inner { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle at 40% 38%, #6b7a8d, #2a3545); box-shadow: 0 3px 0 rgba(0,0,0,0.5), 0 0 0 3px #1a2535, inset 0 2px 3px rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
-.dial-pip { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #5af, #1a6fb0); box-shadow: 0 0 8px rgba(80,160,255,0.8); }
-.speed-readout { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 900; color: #fff; line-height: 1; }
-.speed-readout sup { font-size: 10px; color: rgba(255,255,255,0.4); margin-left: 3px; vertical-align: super; }
-.speed-track { position: relative; height: 14px; border-radius: 7px; background: #0d1520; box-shadow: inset 0 2px 4px rgba(0,0,0,0.6); overflow: hidden; cursor: pointer; margin-top: 4px; }
-.speed-fill { height: 100%; border-radius: 7px; background: linear-gradient(90deg, #1a6fb0, #5af, #aef); box-shadow: 0 0 14px rgba(80,180,255,0.5); transition: width 0.12s ease; width: 0%; }
-input[type=range].slider { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-.leds { display: flex; gap: 4px; margin-top: 5px; }
-.led { width: 13px; height: 13px; border-radius: 50%; background: #0d1520; box-shadow: inset 0 1px 3px rgba(0,0,0,0.6); transition: background 0.12s, box-shadow 0.12s; }
-.led.on { background: radial-gradient(circle at 38% 35%, #7ee8fa, #1a9bd0); box-shadow: 0 0 7px rgba(80,200,255,0.9); }
-.status-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.status-light { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; background: #111; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); transition: background 0.3s, box-shadow 0.3s; }
-.status-light.green { background: radial-gradient(circle at 38% 35%, #6ef, #27ae60); box-shadow: 0 0 10px rgba(39,200,96,0.9); }
-.status-light.amber { background: radial-gradient(circle at 38% 35%, #ffe, #f0b429); box-shadow: 0 0 10px rgba(240,180,41,0.8); }
-.status-light.red   { background: radial-gradient(circle at 38% 35%, #faa, #c0392b); box-shadow: 0 0 10px rgba(200,60,40,0.9); }
-.status-text { font-size: 9px; color: rgba(255,255,255,0.55); letter-spacing: 1px; }
-.queue-badge { background: var(--accent-gold); color: #3d2600; font-family: 'Orbitron', sans-serif; font-size: 8px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 1px; box-shadow: 0 2px 0 rgba(0,0,0,0.3); margin-left: auto; }
-.dir-btn { flex: 1; height: 50px; border-radius: 8px; border: none; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; color: #fff; background: var(--brick-mid); box-shadow: 0 4px 0 rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1) inset; transition: transform 0.08s, box-shadow 0.08s; position: relative; }
-.dir-btn::before { content: ''; position: absolute; top: 5px; left: 50%; transform: translateX(-50%); width: 18px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.18); }
-.dir-btn:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.5); }
-.dir-btn.fwd { background: var(--accent-blue); }
-.dir-btn.rev { background: #3a2060; }
-.dir-btn.active-dir { background: var(--accent-green) !important; box-shadow: 0 4px 0 #155c30, 0 0 14px rgba(39,174,96,0.4); }
-.dir-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.timer-display { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: var(--accent-gold); text-shadow: 0 0 12px rgba(240,180,41,0.5); letter-spacing: 3px; text-align: center; margin-top: 4px; transition: color 0.3s; }
-.timer-display.warn { color: var(--accent-red); text-shadow: 0 0 12px rgba(200,60,40,0.6); }
-.fn-btn { flex: 1; height: 40px; border: none; border-radius: 7px; cursor: pointer; font-size: 16px; color: #fff; background: var(--brick-mid); box-shadow: 0 3px 0 rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.08) inset; transition: transform 0.08s, box-shadow 0.08s, background 0.15s; }
-.fn-btn:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.4); }
-.fn-btn.lit { background: #8b6914; box-shadow: 0 3px 0 #4a3800, 0 0 10px rgba(240,180,41,0.45); }
-.fn-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.estop-btn { width: 100%; height: 56px; border: none; border-radius: 10px; cursor: pointer; background: radial-gradient(ellipse at 50% 30%, #e74c3c, #8b1a1a); box-shadow: 0 5px 0 #5a0f0f, 0 1px 0 rgba(255,255,255,0.2) inset, 0 0 22px rgba(231,76,60,0.25); font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 4px; font-weight: 900; color: #fff; transition: transform 0.08s, box-shadow 0.08s; position: relative; }
-.estop-btn::before { content: ''; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.22); }
-.estop-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #5a0f0f; }
-.inactive-overlay { position: absolute; inset: 0; z-index: 20; border-radius: 16px; background: rgba(5,10,20,0.72); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; backdrop-filter: blur(3px); transition: opacity 0.4s; }
-.inactive-overlay.hidden { opacity: 0; pointer-events: none; }
-.inactive-overlay .io-title { font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; color: rgba(255,255,255,0.7); text-transform: uppercase; }
-.inactive-overlay .io-pos { font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 900; color: var(--accent-gold); text-shadow: 0 0 20px rgba(240,180,41,0.5); }
-.inactive-overlay .io-sub { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .4s;
+    }
+    .dot.green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.red    { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .dot.amber  { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
 
-/* ── Queue bar ── */
-.queue-panel { background: rgba(26,37,53,0.9); border: 1px solid rgba(240,180,41,0.15); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(6px); width: 100%; }
-.queue-label { font-family: 'Orbitron', sans-serif; font-size: 9px; letter-spacing: 3px; color: rgba(255,255,255,0.35); text-transform: uppercase; white-space: nowrap; }
-.queue-slots { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-.q-slot { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700; transition: all 0.3s; }
-.q-slot.active { background: var(--accent-green); color: #fff; box-shadow: 0 0 14px rgba(39,174,96,0.5), 0 3px 0 #155c30; }
-.q-slot.waiting { background: var(--brick-mid); color: rgba(255,255,255,0.5); box-shadow: 0 2px 0 rgba(0,0,0,0.4); }
-.q-slot.you { background: var(--accent-blue); color: #fff; box-shadow: 0 0 12px rgba(31,95,166,0.5), 0 3px 0 rgba(0,0,0,0.4); animation: youPulse 2s ease-in-out infinite; }
-@keyframes youPulse { 0%,100%{box-shadow:0 0 12px rgba(31,95,166,0.5),0 3px 0 rgba(0,0,0,0.4)} 50%{box-shadow:0 0 22px rgba(31,95,166,0.8),0 3px 0 rgba(0,0,0,0.4)} }
-.queue-next-text { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1px; white-space: nowrap; }
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      overflow: hidden;
+    }
 
-/* ── Toast ── */
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a2535; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 20px; font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.7); box-shadow: 0 8px 32px rgba(0,0,0,0.5); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; white-space: nowrap; }
-.toast.show { transform: translateX(-50%) translateY(0); }
+    /* ── Camera panel ── */
+    .cameras {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 6px;
+      overflow: hidden;
+    }
 
-@media (max-width: 600px) {
-  .topbar-stats { display: none; }
-  .header-title { font-size: 10px; letter-spacing: 2px; }
-  .speed-readout { font-size: 22px; }
-  .timer-display { font-size: 18px; }
-  .dial-wrap { width: 96px; height: 96px; }
-  .dial-outer { width: 92px; height: 92px; }
-}
-</style>
+    .cam-box {
+      flex: 1;
+      background: #050507;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cam-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .cam-label {
+      position: absolute;
+      top: 6px; left: 8px;
+      font-size: .65rem;
+      color: var(--muted);
+      background: rgba(0,0,0,.6);
+      padding: 2px 7px;
+      border-radius: 10px;
+      letter-spacing: .06em;
+    }
+
+    .cam-offline {
+      color: var(--muted);
+      font-size: .8rem;
+      text-align: center;
+    }
+
+    /* ── Controls panel ── */
+    .controls {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    /* ── Driver info ── */
+    .driver-info {
+      background: #0d0d0f;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
+      min-height: 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .driver-info .label {
+      font-size: .65rem;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .driver-info .country-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+    }
+
+    .driver-info img.flag {
+      width: 24px;
+      height: 18px;
+      border-radius: 2px;
+      object-fit: cover;
+    }
+
+    .driver-info .city {
+      font-size: .7rem;
+      color: var(--muted);
+    }
+
+    .your-turn-badge {
+      background: var(--amber);
+      color: #000;
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* ── Time bar ── */
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .time-bar-wrap {
+      flex: 1;
+      height: 5px;
+      background: #0d0d0f;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .time-bar {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 3px;
+      width: 100%;
+      transition: width .5s linear;
+    }
+
+    .time-label {
+      font-size: .75rem;
+      color: var(--muted);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* ── Throttle section ── */
+    .throttle-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .throttle-header {
+      font-size: .65rem;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      align-self: flex-start;
+    }
+
+    .throttle-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* The actual throttle track */
+    .throttle-track-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: var(--track-h);
+      user-select: none;
+      touch-action: none;
+    }
+
+    .throttle-track {
+      width: 10px;
+      height: 100%;
+      background: #0d0d0f;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .throttle-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      border-radius: 5px;
+      transition: height .05s, background .3s;
+    }
+
+    .throttle-handle {
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%, 50%);
+      width: calc(var(--handle-r) * 2);
+      height: calc(var(--handle-r) * 2);
+      background: #d0d0e0;
+      border-radius: 50%;
+      border: 3px solid #888;
+      cursor: grab;
+      transition: box-shadow .15s, background .3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      bottom: 0;
+      z-index: 2;
+    }
+
+    .throttle-handle:active { cursor: grabbing; }
+
+    .throttle-handle::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #666;
+    }
+
+    /* Notch marks on the right of track */
+    .throttle-notches {
+      position: absolute;
+      right: -32px;
+      top: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .notch {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .6rem;
+      color: var(--muted);
+    }
+
+    .notch::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Up/down fine-tune buttons */
+    .throttle-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .th-btn {
+      background: #0d0d0f;
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .th-btn:active { background: var(--amber-dim); border-color: var(--amber); }
+
+    /* Speed readout */
+    .speed-readout {
+      text-align: center;
+    }
+
+    .speed-num {
+      font-size: 2.8rem;
+      font-weight: 800;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color .3s;
+    }
+
+    .speed-unit {
+      font-size: .65rem;
+      color: var(--muted);
+      letter-spacing: .1em;
+    }
+
+    /* ── Direction buttons ── */
+    .dir-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dir-btn {
+      flex: 1;
+      height: 42px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d0d0f;
+      color: var(--muted);
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .dir-btn.active-fwd {
+      background: rgba(76,175,80,.15);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .dir-btn.active-rev {
+      background: rgba(229,57,53,.15);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    /* ── Queue status ── */
+    .queue-section {
+      background: #0d0d0f;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: .78rem;
+    }
+
+    .queue-section .q-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .queue-section .q-row span { color: var(--text); font-weight: 600; }
+
+    /* ── E-stop ── */
+    .estop-btn {
+      width: 100%;
+      height: 48px;
+      background: rgba(229,57,53,.1);
+      border: 1px solid #6b1e1e;
+      border-radius: 8px;
+      color: #f44;
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+
+    .estop-btn:hover { background: rgba(229,57,53,.25); border-color: var(--red); }
+    .estop-btn:active { background: rgba(229,57,53,.4); }
+
+    /* ── Overlay notifications ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+    }
+
+    .overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .overlay-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 36px;
+      text-align: center;
+      max-width: 300px;
+    }
+
+    .overlay-box .icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .overlay-box h2   { font-size: 1.2rem; margin-bottom: 6px; }
+    .overlay-box p    { font-size: .82rem; color: var(--muted); }
+
+    /* Inactivity warning toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #3d2a00;
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      text-align: center;
+      z-index: 99;
+      transition: transform .3s;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Disabled controls */
+    .controls-disabled .throttle-track,
+    .controls-disabled .throttle-handle,
+    .controls-disabled .dir-btn,
+    .controls-disabled .th-btn {
+      opacity: .35;
+      pointer-events: none;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 640px) {
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: 40% 1fr;
+      }
+
+      .cameras { flex-direction: row; }
+      .controls { border-left: none; border-top: 1px solid var(--border); }
+      :root { --track-h: 200px; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- ── Top bar ── -->
-<nav class="topbar">
-  <div class="topbar-logo">bigtrainset.com</div>
-  <div class="topbar-stats">
-    <div class="stat-pill"><div class="stat-dot"></div> LIVE <strong id="viewerCount">--</strong> viewer(s)</div>
-    <div class="stat-pill"><div class="stat-dot amber"></div> QUEUE <strong id="queueCount">--</strong></div>
-    <div class="stat-pill">PING <strong id="pingMs">--</strong>ms</div>
+<!-- ── Header ─────────────────────────────────────────── -->
+<header>
+  <h1>🚂 BIG TRAIN SET</h1>
+  <div class="status-pill">
+    <div class="dot" id="piDot"></div>
+    <span id="piLabel">Pi offline</span>
   </div>
-</nav>
+  <div class="status-pill">
+    👁 <span id="viewerCount">—</span>
+  </div>
+</header>
 
-<main class="page">
+<!-- ── Main ───────────────────────────────────────────── -->
+<main>
 
-  <!-- ── Cameras ── -->
-  <div class="cam-row">
+  <!-- Cameras -->
+  <div class="cameras">
+    <div class="cam-box">
+      <span class="cam-label">CAM 1 · FRONT</span>
+      <img id="cam1" src="" alt="" style="display:none">
+      <div class="cam-offline" id="cam1offline">No signal</div>
+    </div>
+    <div class="cam-box">
+      <span class="cam-label">CAM 2 · OVERVIEW</span>
+      <img id="cam2" src="" alt="" style="display:none">
+      <div class="cam-offline" id="cam2offline">No signal</div>
+    </div>
+  </div>
 
-    <!-- Cam 1 placeholder (add your second camera here later) -->
-    <div class="cam-tile">
-      <div class="cam-stud-strip"></div>
-      <div class="cam-viewport">
-        <img id="cam1feed"
-     style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;top:0;left:0;">
-        <div class="no-signal" id="ns1">
-          <div class="ns-bars">
-            <div style="height:7px"></div><div style="height:13px"></div>
-            <div style="height:22px"></div><div style="height:15px"></div><div style="height:9px"></div>
+  <!-- Controls -->
+  <div class="controls" id="controlPanel">
+
+    <!-- Driver info -->
+    <div class="driver-info" id="driverInfo">
+      <div class="label" id="driverLabel">Waiting for driver…</div>
+      <div class="country-row" id="driverCountryRow" style="display:none">
+        <img class="flag" id="driverFlag" src="" alt="">
+        <span id="driverCountry"></span>
+      </div>
+      <div class="city" id="driverCity"></div>
+    </div>
+
+    <!-- Time remaining bar (only shown during active slot) -->
+    <div class="time-row" id="timeRow" style="display:none">
+      <div class="time-bar-wrap">
+        <div class="time-bar" id="timeBar"></div>
+      </div>
+      <div class="time-label" id="timeLabel">2:00</div>
+    </div>
+
+    <!-- Throttle -->
+    <div class="throttle-section">
+      <div class="throttle-header">Throttle</div>
+      <div class="throttle-row">
+
+        <!-- Fine-tune buttons -->
+        <div class="throttle-btns">
+          <button class="th-btn" id="btnUp" title="Increase speed">▲</button>
+          <button class="th-btn" id="btnDown" title="Decrease speed">▼</button>
+        </div>
+
+        <!-- Vertical track -->
+        <div class="throttle-track-wrap" id="throttleWrap">
+          <div class="throttle-track" id="throttleTrack">
+            <div class="throttle-fill" id="throttleFill"></div>
+            <div class="throttle-handle" id="throttleHandle"></div>
           </div>
-          <span>No signal</span>
-        </div>
-        <div class="scanlines"></div>
-      </div>
-      <div class="cam-label">CAM 1 — Overview</div>
-      <div class="cam-live"><div class="live-dot"></div>LIVE</div>
-      <div class="cam-bottom"><span>OVERHEAD</span><span id="tc1">--:--:--</span></div>
-    </div>
-
-    <!-- Cam 2 — fed via Socket.io from Pi -->
-    <div class="cam-tile">
-      <div class="cam-stud-strip"></div>
-      <div class="cam-viewport">
-        <div class="no-signal" id="ns2">
-          <div class="ns-bars">
-            <div style="height:7px"></div><div style="height:13px"></div>
-            <div style="height:22px"></div><div style="height:15px"></div><div style="height:9px"></div>
-          </div>
-          <span>Connecting...</span>
-        </div>
-        <img id="cam2feed"
-             style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;top:0;left:0;">
-        <div class="scanlines"></div>
-      </div>
-      <div class="cam-label">CAM 2 — Trackside</div>
-      <div class="cam-live"><div class="live-dot"></div>LIVE</div>
-      <div class="cam-bottom"><span>LINESIDE</span><span id="tc2">--:--:--</span></div>
-    </div>
-
-  </div>
-
-  <!-- ── Control panel ── -->
-  <div class="panel" id="mainPanel">
-    <div class="studs"></div>
-
-    <div class="header-strip">
-      <div></div>
-      <div class="header-title">Railway Control</div>
-      <div></div>
-    </div>
-
-    <!-- Row 1: Dial + Speed -->
-    <div class="row">
-      <div class="tile tile-dark" style="display:flex;align-items:center;justify-content:center;padding:8px;">
-        <div class="dial-wrap">
-          <div class="dial-outer" id="dialOuter">
-            <div class="dial-inner"><div class="dial-pip"></div></div>
+          <!-- Notches -->
+          <div class="throttle-notches">
+            <div class="notch">100</div>
+            <div class="notch">75</div>
+            <div class="notch">50</div>
+            <div class="notch">25</div>
+            <div class="notch">0</div>
           </div>
         </div>
-      </div>
-      <div class="tile tile-dark" style="flex:1;display:flex;flex-direction:column;gap:4px;">
-        <div class="lbl">Throttle</div>
-        <div class="speed-readout" id="speedReadout">000<sup>km/h</sup></div>
-        <div class="speed-track">
-          <div class="speed-fill" id="speedFill"></div>
-          <input type="range" class="slider" id="speedSlider" min="0" max="100" value="0">
+
+        <!-- Speed readout -->
+        <div class="speed-readout">
+          <div class="speed-num" id="speedNum">0</div>
+          <div class="speed-unit">SPEED %</div>
         </div>
-        <div class="leds" id="ledRow"></div>
-        <div class="status-row">
-          <div class="status-light amber" id="connLight"></div>
-          <div class="status-text" id="connText">CONNECTING</div>
-          <div class="queue-badge" id="queueBadge">QUEUE: --</div>
-        </div>
+
       </div>
+    </div><!-- /throttle-section -->
+
+    <!-- Direction -->
+    <div class="dir-row">
+      <button class="dir-btn active-fwd" id="btnFwd">▶ FWD</button>
+      <button class="dir-btn" id="btnRev">REV ◀</button>
     </div>
 
-    <!-- Row 2: Direction -->
-    <div class="row">
-      <button class="dir-btn fwd active-dir" id="btnFwd" disabled>▶▶ Forward</button>
-      <button class="dir-btn rev" id="btnRev" disabled>◀◀ Reverse</button>
+    <!-- Queue status -->
+    <div class="queue-section" id="queueSection">
+      <div class="q-row">Position <span id="qPos">—</span></div>
+      <div class="q-row">Queue <span id="qLen">—</span></div>
+      <div class="q-row">Est. wait <span id="qWait">—</span></div>
     </div>
 
-    <!-- Row 3: Timer + Functions -->
-    <div class="row">
-      <div class="tile tile-blue" style="flex:1;text-align:center;">
-        <div class="lbl">Drive slot</div>
-        <div class="timer-display" id="timerDisplay">01:00</div>
-      </div>
-      <div class="tile tile-mid" style="flex:1;display:flex;flex-direction:column;gap:5px;">
-        <div class="lbl">Functions</div>
-        <div style="display:flex;gap:6px;">
-          <button class="fn-btn" id="hornBtn" disabled title="Horn">📯</button>
-          <button class="fn-btn" id="lightsBtn" disabled title="Lights">💡</button>
-        </div>
-      </div>
-    </div>
+    <!-- E-stop -->
+    <button class="estop-btn" id="estopBtn">⚡ Emergency Stop</button>
 
-    <!-- Row 4: E-Stop -->
-    <div class="row" style="margin-top:2px;">
-      <button class="estop-btn" id="estopBtn">⬛ Emergency Stop</button>
-    </div>
-
-    <!-- Inactive overlay -->
-    <div class="inactive-overlay" id="inactiveOverlay">
-      <div class="io-title">Waiting for your turn</div>
-      <div class="io-pos" id="queuePos">—</div>
-      <div class="io-sub" id="queueEta">Connecting…</div>
-    </div>
-  </div>
-
-  <!-- ── Queue bar ── -->
-  <div class="queue-panel">
-    <div class="queue-label">Queue</div>
-    <div class="queue-slots" id="queueSlots"></div>
-    <div class="queue-next-text" id="queueNextText">—</div>
-  </div>
-
+  </div><!-- /controls -->
 </main>
 
-<div class="toast" id="toast"></div>
+<!-- Inactivity warning toast -->
+<div class="toast" id="inactivityToast">⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s</div>
 
+<!-- Overlays -->
+<div class="overlay" id="overlayWaiting">
+  <div class="overlay-box">
+    <div class="icon">🚂</div>
+    <h2>You're in the queue</h2>
+    <p id="overlayWaitMsg">Position — of — visitors</p>
+  </div>
+</div>
+
+<div class="overlay" id="overlayYourTurn">
+  <div class="overlay-box">
+    <div class="icon">🟢</div>
+    <h2>Your turn!</h2>
+    <p>You have 2 minutes to drive the train.<br>Use the throttle to control speed.</p>
+  </div>
+</div>
+
+<div class="overlay" id="overlaySlotEnded">
+  <div class="overlay-box">
+    <div class="icon">⏱</div>
+    <h2>Time's up!</h2>
+    <p>Thanks for driving. You've been moved to the back of the queue.</p>
+  </div>
+</div>
+
+<div class="overlay" id="overlayPiOffline">
+  <div class="overlay-box">
+    <div class="icon">⚙️</div>
+    <h2>Train offline</h2>
+    <p>The railway controller is not connected. Please check back soon.</p>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
 <script>
-// ── Socket.io connection ──────────────────────────────────────
-const socket = io('https://bigtrainset.com');
-
-// ── State ─────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────
 let speed       = 0;
 let direction   = 'fwd';
-let lightsOn    = false;
-let isActive    = false;
-let timerSecs   = 60;
-let timerIv     = null;
+let isMyTurn    = false;
+let slotEndTime = 0;
+let timerTick   = null;
+let inactivityCountdown = null;
+const SLOT_MS   = 120_000;
 
-// ── DOM refs ──────────────────────────────────────────────────
-const speedSlider    = document.getElementById('speedSlider');
-const speedFill      = document.getElementById('speedFill');
-const speedReadout   = document.getElementById('speedReadout');
-const ledRow         = document.getElementById('ledRow');
-const timerDisplay   = document.getElementById('timerDisplay');
-const connLight      = document.getElementById('connLight');
-const connText       = document.getElementById('connText');
-const queueBadge     = document.getElementById('queueBadge');
+const socket    = io();
+
+// ── DOM refs ──────────────────────────────────────────────────────
+const piDot          = document.getElementById('piDot');
+const piLabel        = document.getElementById('piLabel');
+const viewerCount    = document.getElementById('viewerCount');
+const driverInfo     = document.getElementById('driverInfo');
+const driverLabel    = document.getElementById('driverLabel');
+const driverCountryRow = document.getElementById('driverCountryRow');
+const driverFlag     = document.getElementById('driverFlag');
+const driverCountry  = document.getElementById('driverCountry');
+const driverCity     = document.getElementById('driverCity');
+const timeRow        = document.getElementById('timeRow');
+const timeBar        = document.getElementById('timeBar');
+const timeLabel      = document.getElementById('timeLabel');
+const speedNum       = document.getElementById('speedNum');
+const throttleTrack  = document.getElementById('throttleTrack');
+const throttleFill   = document.getElementById('throttleFill');
+const throttleHandle = document.getElementById('throttleHandle');
 const btnFwd         = document.getElementById('btnFwd');
 const btnRev         = document.getElementById('btnRev');
+const btnUp          = document.getElementById('btnUp');
+const btnDown        = document.getElementById('btnDown');
+const qPos           = document.getElementById('qPos');
+const qLen           = document.getElementById('qLen');
+const qWait          = document.getElementById('qWait');
+const controlPanel   = document.getElementById('controlPanel');
 const estopBtn       = document.getElementById('estopBtn');
-const hornBtn        = document.getElementById('hornBtn');
-const lightsBtn      = document.getElementById('lightsBtn');
-const inactiveOverlay= document.getElementById('inactiveOverlay');
-const queuePos       = document.getElementById('queuePos');
-const queueEta       = document.getElementById('queueEta');
-const queueSlots     = document.getElementById('queueSlots');
-const queueNextText  = document.getElementById('queueNextText');
-const dialOuter      = document.getElementById('dialOuter');
-const toastEl        = document.getElementById('toast');
-const viewerCount    = document.getElementById('viewerCount');
-const queueCount     = document.getElementById('queueCount');
-const pingEl         = document.getElementById('pingMs');
-const cam2feed       = document.getElementById('cam2feed');
-const ns2            = document.getElementById('ns2');
+const inactivityToast = document.getElementById('inactivityToast');
+const inactivityCount = document.getElementById('inactivityCount');
 
-// Build LEDs
-for (let i = 0; i < 10; i++) {
-  const d = document.createElement('div');
-  d.className = 'led'; d.id = 'led' + i;
-  ledRow.appendChild(d);
+// Overlays
+const overlayWaiting   = document.getElementById('overlayWaiting');
+const overlayWaitMsg   = document.getElementById('overlayWaitMsg');
+const overlayYourTurn  = document.getElementById('overlayYourTurn');
+const overlaySlotEnded = document.getElementById('overlaySlotEnded');
+const overlayPiOffline = document.getElementById('overlayPiOffline');
+
+// ── Throttle control (drag + pointer events) ──────────────────────
+function trackHeight() {
+  return throttleTrack.getBoundingClientRect().height;
 }
 
-// ── Speed update ──────────────────────────────────────────────
-function updateSpeed(v, emit = true) {
-  speed = Math.max(0, Math.min(100, Math.round(v)));
-  speedSlider.value = speed;
-  speedFill.style.width = speed + '%';
-  speedReadout.innerHTML = String(speed).padStart(3, '0') + '<sup>km/h</sup>';
-  const lit = Math.round(speed / 10);
-  for (let i = 0; i < 10; i++) document.getElementById('led' + i).classList.toggle('on', i < lit);
-  const deg = (speed / 100) * 270 - 135;
-  dialOuter.style.transform = `rotate(${deg}deg)`;
-  if (emit) socket.emit('train:control', { speed, direction });
+function setSpeedFromY(clientY) {
+  const rect = throttleTrack.getBoundingClientRect();
+  const h    = rect.height;
+  let   pct  = (rect.bottom - clientY) / h; // bottom = 0, top = 1
+  pct = Math.max(0, Math.min(1, pct));
+  setSpeed(Math.round(pct * 100));
 }
 
-// ── Direction ─────────────────────────────────────────────────
+function updateHandlePosition() {
+  const h   = trackHeight();
+  // Handle positioned from bottom; at speed=0 handle is at bottom
+  const pct = speed / 100;
+  // bottom property: 0 puts handle centre at bottom, h puts it at top
+  const bottom = pct * (h - 2); // slight inset so handle doesn't overflow
+  throttleHandle.style.bottom = `${bottom}px`;
+
+  // Fill
+  throttleFill.style.height = `${pct * 100}%`;
+
+  // Colour gradient
+  let color;
+  if (speed === 0)       color = '#333';
+  else if (speed < 35)   color = '#4caf50';
+  else if (speed < 70)   color = '#f5a623';
+  else                   color = '#e53935';
+
+  throttleFill.style.background  = color;
+  throttleHandle.style.background = speed === 0 ? '#d0d0e0' : color;
+  throttleHandle.style.boxShadow  = speed > 0
+    ? `0 0 10px ${color}88`
+    : '';
+
+  // Speed readout colour
+  speedNum.style.color = color;
+}
+
+function setSpeed(v) {
+  speed = Math.max(0, Math.min(100, v));
+  speedNum.textContent = speed;
+  updateHandlePosition();
+  sendControl();
+}
+
+let dragging = false;
+
+throttleHandle.addEventListener('pointerdown', (e) => {
+  if (!isMyTurn) return;
+  dragging = true;
+  throttleHandle.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+
+document.addEventListener('pointermove', (e) => {
+  if (!dragging || !isMyTurn) return;
+  setSpeedFromY(e.clientY);
+});
+
+document.addEventListener('pointerup', () => { dragging = false; });
+
+// Click anywhere on track
+throttleTrack.addEventListener('pointerdown', (e) => {
+  if (!isMyTurn || e.target === throttleHandle) return;
+  setSpeedFromY(e.clientY);
+});
+
+// Fine-tune buttons
+btnUp.addEventListener('click',   () => { if (isMyTurn) setSpeed(speed + 5); });
+btnDown.addEventListener('click', () => { if (isMyTurn) setSpeed(speed - 5); });
+
+// Keyboard support
+document.addEventListener('keydown', (e) => {
+  if (!isMyTurn) return;
+  if (e.key === 'ArrowUp')   { e.preventDefault(); setSpeed(speed + 5); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); setSpeed(speed - 5); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); setDirection('rev'); }
+  if (e.key === 'ArrowRight'){ e.preventDefault(); setDirection('fwd'); }
+  if (e.key === ' ')         { e.preventDefault(); setSpeed(0); }
+});
+
+// ── Direction ─────────────────────────────────────────────────────
 function setDirection(dir) {
   direction = dir;
-  btnFwd.classList.toggle('active-dir', dir === 'fwd');
-  btnRev.classList.toggle('active-dir', dir === 'rev');
+  btnFwd.className = 'dir-btn' + (dir === 'fwd' ? ' active-fwd' : '');
+  btnRev.className = 'dir-btn' + (dir === 'rev' ? ' active-rev' : '');
+  sendControl();
 }
 
-// ── Active/inactive ───────────────────────────────────────────
-function setActive(active) {
-  isActive = active;
-  inactiveOverlay.classList.toggle('hidden', active);
-  speedSlider.disabled = !active;
-  btnFwd.disabled  = !active;
-  btnRev.disabled  = !active;
-  hornBtn.disabled = !active;
-  lightsBtn.disabled = !active;
-  if (active) {
-    connLight.className = 'status-light green';
-    connText.textContent = 'DRIVING';
-    queueBadge.textContent = 'YOUR TURN';
-    startTimer(60);
-    showToast("🟢 You're driving! 60 seconds on the clock.");
-  } else {
-    connLight.className = 'status-light amber';
-    connText.textContent = 'WAITING';
-  }
+btnFwd.addEventListener('click', () => { if (isMyTurn) setDirection('fwd'); });
+btnRev.addEventListener('click', () => { if (isMyTurn) setDirection('rev'); });
+
+// ── Send to server ────────────────────────────────────────────────
+function sendControl() {
+  if (!isMyTurn) return;
+  socket.emit('train:control', { speed, direction });
 }
 
-// ── Timer ─────────────────────────────────────────────────────
-function startTimer(secs) {
-  clearInterval(timerIv);
-  timerSecs = secs;
-  renderTimer();
-  timerIv = setInterval(() => {
-    timerSecs--;
-    renderTimer();
-    timerDisplay.classList.toggle('warn', timerSecs <= 10);
-    if (timerSecs <= 0) clearInterval(timerIv);
-  }, 1000);
-}
-function renderTimer() {
-  const m = String(Math.floor(timerSecs / 60)).padStart(2, '0');
-  const s = String(timerSecs % 60).padStart(2, '0');
-  timerDisplay.textContent = m + ':' + s;
-}
-
-// ── Queue display ─────────────────────────────────────────────
-function renderQueue(length, myPos) {
-  queueCount.textContent = length;
-  queueBadge.textContent = isActive ? 'YOUR TURN' : `QUEUE: ${length}`;
-  queueSlots.innerHTML = '';
-  const show = Math.min(length, 8);
-  for (let i = 0; i < show; i++) {
-    const slot = document.createElement('div');
-    slot.className = 'q-slot ' + (i === 0 ? 'active' : i === myPos - 1 ? 'you' : 'waiting');
-    slot.textContent = i === 0 ? '▶' : i === myPos - 1 ? 'YOU' : i + 1;
-    queueSlots.appendChild(slot);
-  }
-  if (length > 8) {
-    const more = document.createElement('div');
-    more.className = 'q-slot waiting';
-    more.textContent = '+' + (length - 8);
-    queueSlots.appendChild(more);
-  }
-  if (!isActive) {
-    queuePos.textContent = `#${myPos}`;
-    queueEta.textContent = myPos === 1 ? 'Up next!' : `~${myPos - 1} turn(s) to wait`;
-    queueNextText.textContent = myPos === 1 ? 'You are next!' : `~${Math.ceil((myPos-1))} min wait`;
-  } else {
-    queueNextText.textContent = 'Driving now';
-  }
-}
-
-// ── Toast ─────────────────────────────────────────────────────
-let toastTimeout;
-function showToast(msg) {
-  toastEl.textContent = msg;
-  toastEl.classList.add('show');
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => toastEl.classList.remove('show'), 3500);
-}
-
-// ── Timecode ──────────────────────────────────────────────────
-setInterval(() => {
-  const now = new Date();
-  const tc = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-  document.getElementById('tc1').textContent = tc;
-  document.getElementById('tc2').textContent = tc;
-}, 1000);
-
-// ── Socket events ─────────────────────────────────────────────
-socket.on('connect', () => {
-  connLight.className = 'status-light amber';
-  connText.textContent = 'CONNECTED';
-  showToast('Connected to server');
+// ── E-stop ────────────────────────────────────────────────────────
+estopBtn.addEventListener('click', () => {
+  if (!isMyTurn) return;
+  setSpeed(0);
 });
 
-socket.on('disconnect', () => {
-  connLight.className = 'status-light red';
-  connText.textContent = 'DISCONNECTED';
-  showToast('⚠️ Connection lost — reconnecting…');
-  setActive(false);
+// ── Time bar ──────────────────────────────────────────────────────
+function startTimeBar(durationMs, msLeft) {
+  slotEndTime = Date.now() + msLeft;
+  clearInterval(timerTick);
+  timeRow.style.display = 'flex';
+
+  timerTick = setInterval(() => {
+    const left = slotEndTime - Date.now();
+    if (left <= 0) { clearInterval(timerTick); timeRow.style.display = 'none'; return; }
+    const pct = (left / durationMs) * 100;
+    timeBar.style.width  = pct + '%';
+    timeBar.style.background = left < 15000 ? '#e53935' : left < 30000 ? '#f5a623' : '#f5a623';
+    const s = Math.ceil(left / 1000);
+    const m = Math.floor(s / 60);
+    timeLabel.textContent = `${m}:${String(s % 60).padStart(2,'0')}`;
+  }, 500);
+}
+
+// ── Driver info display ───────────────────────────────────────────
+function showDriver(country, isMe) {
+  if (!country || country.code === 'XX') {
+    driverLabel.textContent = 'Now driving';
+    driverCountryRow.style.display = 'none';
+    driverCity.textContent = '';
+    return;
+  }
+
+  driverLabel.innerHTML = isMe
+    ? '<span class="your-turn-badge">YOU ARE DRIVING</span>'
+    : 'Now driving';
+
+  const cc = country.code.toLowerCase();
+  driverFlag.src = `https://flagcdn.com/32x24/${cc}.png`;
+  driverFlag.alt = country.code;
+  driverFlag.onerror = () => { driverFlag.style.display='none'; };
+  driverCountry.textContent = country.name;
+  driverCountryRow.style.display = 'flex';
+  driverCity.textContent = country.city || '';
+}
+
+// ── Overlays ──────────────────────────────────────────────────────
+function showOverlay(el, ms = 0) {
+  hideAllOverlays();
+  el.classList.add('visible');
+  if (ms) setTimeout(() => el.classList.remove('visible'), ms);
+}
+
+function hideAllOverlays() {
+  [overlayWaiting, overlayYourTurn, overlaySlotEnded, overlayPiOffline]
+    .forEach(o => o.classList.remove('visible'));
+}
+
+// ── Socket events ─────────────────────────────────────────────────
+socket.on('pi:connected', () => {
+  piDot.className  = 'dot green';
+  piLabel.textContent = 'Pi online';
+  overlayPiOffline.classList.remove('visible');
 });
 
-socket.on('queue:active', ({ durationMs }) => {
-  setActive(true);
+socket.on('pi:disconnected', () => {
+  piDot.className  = 'dot red';
+  piLabel.textContent = 'Pi offline';
+  showOverlay(overlayPiOffline);
+  setControlsEnabled(false);
+});
+
+socket.on('queue:active', (data) => {
+  isMyTurn = true;
+  setControlsEnabled(true);
+  showOverlay(overlayYourTurn, 2500);
+  showDriver(data.country, true);
+  startTimeBar(data.durationMs, data.durationMs);
+  setSpeed(0);
 });
 
 socket.on('queue:slotended', () => {
-  setActive(false);
-  updateSpeed(0, false);
-  showToast('⏱ Your slot ended — back in the queue');
+  isMyTurn = false;
+  setControlsEnabled(false);
+  clearInterval(timerTick);
+  timeRow.style.display = 'none';
+  setSpeed(0);
+  showOverlay(overlaySlotEnded, 3000);
 });
 
-socket.on('queue:warning', ({ secondsLeft }) => {
-  showToast(`⚠️ ${secondsLeft}s left — get ready to hand over!`);
+socket.on('queue:state', (data) => {
+  viewerCount.textContent = data.viewerCount;
+
+  // Queue info
+  const pos  = data.myPosition;
+  const len  = data.queueLength;
+  const wait = data.activeId
+    ? ((pos - 1) * 2 + Math.ceil((data.msLeft || 120000) / 60000))
+    : (pos - 1) * 2;
+  qPos.textContent  = `#${pos}`;
+  qLen.textContent  = len;
+  qWait.textContent = wait > 0 ? `~${wait} min` : 'Soon';
+
+  // Current driver country (for viewers)
+  if (!isMyTurn) {
+    if (data.activeDriver) {
+      showDriver(data.activeDriver, false);
+      driverLabel.textContent = 'Now driving';
+    } else {
+      driverCountryRow.style.display = 'none';
+      driverLabel.textContent = 'No active driver';
+    }
+    // Show waiting overlay if not your turn
+    overlayWaitMsg.textContent = `Position ${pos} of ${len}`;
+    if (!overlayYourTurn.classList.contains('visible') &&
+        !overlaySlotEnded.classList.contains('visible') &&
+        !overlayPiOffline.classList.contains('visible')) {
+      showOverlay(overlayWaiting);
+    }
+  }
+
+  // Update time bar even if not driving (show driver's remaining time)
+  if (isMyTurn && data.msLeft > 0) {
+    // already running
+  }
 });
 
 socket.on('queue:full', () => {
-  showToast('😔 Queue is full — try again later');
+  showOverlay(overlayWaiting);
+  overlayWaitMsg.textContent = 'Queue is full — please try again later.';
 });
 
 socket.on('queue:estop', () => {
-  updateSpeed(0, false);
-  setActive(false);
-  showToast('🛑 Emergency stop activated');
+  setSpeed(0);
+  isMyTurn = false;
+  setControlsEnabled(false);
 });
 
 socket.on('queue:notactive', () => {
-  showToast('Not your turn');
+  // Server rejected our command — silently reset
+  isMyTurn = false;
+  setControlsEnabled(false);
 });
 
-socket.on('queue:state', ({ queueLength, myPosition, msLeft, viewerCount: vc }) => {
-  viewerCount.textContent = vc || '--';
-  renderQueue(queueLength, myPosition);
-  if (!isActive && msLeft > 0) startTimer(Math.ceil(msLeft / 1000));
-});
-
-socket.on('train:update', ({ speed: s, direction: d }) => {
-  updateSpeed(s, false);
-  setDirection(d);
-});
-
-// ── Camera frame via Socket.io ────────────────────────────────
-socket.on('cam:frame', (data) => {
-  cam2feed.src = 'data:' + data.type + ';base64,' + data.data;
-  ns2.style.opacity = '0';
-});
-socket.on('cam:frame1', (data) => {
-  const img = document.getElementById('cam1feed');
-  if (img) {
-    img.src = 'data:' + data.type + ';base64,' + data.data;
-    document.getElementById('ns1').style.opacity = '0';
+socket.on('train:update', (data) => {
+  // Reflect state broadcast from server (for viewers)
+  if (!isMyTurn) {
+    speed = data.speed;
+    direction = data.direction;
+    updateHandlePosition();
+    btnFwd.className = 'dir-btn' + (direction === 'fwd' ? ' active-fwd' : '');
+    btnRev.className = 'dir-btn' + (direction === 'rev' ? ' active-rev' : '');
+    speedNum.textContent = speed;
   }
 });
-// ── Controls ──────────────────────────────────────────────────
-speedSlider.addEventListener('input', () => {
-  if (isActive) updateSpeed(+speedSlider.value);
+
+// ── Inactivity warnings ───────────────────────────────────────────
+socket.on('train:inactivity-warning', (data) => {
+  let count = data.secondsLeft || 10;
+  inactivityCount.textContent = count;
+  inactivityToast.classList.add('show');
+
+  clearInterval(inactivityCountdown);
+  inactivityCountdown = setInterval(() => {
+    count--;
+    inactivityCount.textContent = count;
+    if (count <= 0) {
+      clearInterval(inactivityCountdown);
+      setTimeout(() => inactivityToast.classList.remove('show'), 500);
+    }
+  }, 1000);
 });
 
-btnFwd.addEventListener('click', () => {
-  if (!isActive) return;
-  updateSpeed(0);
-  setTimeout(() => setDirection('fwd'), 50);
-  setTimeout(() => socket.emit('train:control', { speed: 0, direction: 'fwd' }), 50);
+socket.on('train:inactivity-stop', () => {
+  inactivityToast.classList.remove('show');
+  clearInterval(inactivityCountdown);
+  // Train stopped by server — reset throttle
+  setSpeed(0);
+  speedNum.textContent = '0';
+  // Show brief toast
+  inactivityToast.textContent = '⏸ Train stopped — move throttle to resume';
+  inactivityToast.classList.add('show');
+  setTimeout(() => {
+    inactivityToast.classList.remove('show');
+    inactivityToast.innerHTML =
+      '⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s';
+  }, 3000);
 });
 
-btnRev.addEventListener('click', () => {
-  if (!isActive) return;
-  updateSpeed(0);
-  setTimeout(() => setDirection('rev'), 50);
-  setTimeout(() => socket.emit('train:control', { speed: 0, direction: 'rev' }), 50);
+// ── Camera feeds ──────────────────────────────────────────────────
+const cam1img     = document.getElementById('cam1');
+const cam1offline = document.getElementById('cam1offline');
+const cam2img     = document.getElementById('cam2');
+const cam2offline = document.getElementById('cam2offline');
+
+socket.on('cam:frame1', (data) => {
+  cam1img.src = `data:image/jpeg;base64,${data.data}`;
+  cam1img.style.display  = 'block';
+  cam1offline.style.display = 'none';
 });
 
-estopBtn.addEventListener('click', () => {
-  updateSpeed(0);
-  estopBtn.style.transform = 'translateY(4px)';
-  setTimeout(() => estopBtn.style.transform = '', 200);
-  socket.emit('train:control', { speed: 0, direction });
+socket.on('cam:frame', (data) => {
+  cam2img.src = `data:image/jpeg;base64,${data.data}`;
+  cam2img.style.display  = 'block';
+  cam2offline.style.display = 'none';
 });
 
-hornBtn.addEventListener('click', () => {
-  if (!isActive) return;
-  hornBtn.style.background = '#f0b429';
-  setTimeout(() => hornBtn.style.background = '', 180);
-  socket.emit('train:function', { fn: 'horn' });
-});
+// ── Controls enable/disable ───────────────────────────────────────
+function setControlsEnabled(enabled) {
+  if (enabled) {
+    controlPanel.classList.remove('controls-disabled');
+    hideAllOverlays();
+  } else {
+    controlPanel.classList.add('controls-disabled');
+  }
+}
 
-lightsBtn.addEventListener('click', () => {
-  if (!isActive) return;
-  lightsOn = !lightsOn;
-  lightsBtn.classList.toggle('lit', lightsOn);
-  socket.emit('train:function', { fn: 'lights', state: lightsOn });
-});
-
-// ── Dial drag ─────────────────────────────────────────────────
-let dragging = false, dragStartY = 0, dragStartSpeed = 0;
-dialOuter.addEventListener('mousedown',  e => { if (!isActive) return; dragging = true; dragStartY = e.clientY; dragStartSpeed = speed; });
-dialOuter.addEventListener('touchstart', e => { if (!isActive) return; dragging = true; dragStartY = e.touches[0].clientY; dragStartSpeed = speed; }, { passive: true });
-document.addEventListener('mousemove',  e => { if (dragging) updateSpeed(dragStartSpeed + (dragStartY - e.clientY) / 1.5); });
-document.addEventListener('touchmove',  e => { if (dragging) updateSpeed(dragStartSpeed + (dragStartY - e.touches[0].clientY) / 1.5); }, { passive: true });
-document.addEventListener('mouseup',   () => dragging = false);
-document.addEventListener('touchend',  () => dragging = false);
-
-// ── Ping display ──────────────────────────────────────────────
-setInterval(() => {
-  const start = Date.now();
-  socket.emit('ping', {}, () => {
-    pingEl.textContent = Date.now() - start;
-  });
-}, 5000);
+// Start disabled
+setControlsEnabled(false);
+updateHandlePosition();
+piDot.className = 'dot red';
 </script>
 </body>
 </html>
