@@ -69,18 +69,14 @@ const COUNTRY_NAMES = {
 };
 
 function countryFromSocket(socket) {
+  if (!geoip) return { code: 'XX', name: 'Unknown', city: '' };
   const ip =
-    socket.handshake.headers['cf-connecting-ip']          ||
+    socket.handshake.headers['cf-connecting-ip'] ||
     (socket.handshake.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
     socket.handshake.address;
-
   const geo = geoip.lookup(ip);
   if (geo && geo.country) {
-    return {
-      code: geo.country,
-      name: COUNTRY_NAMES[geo.country] || geo.country,
-      city: geo.city || ''
-    };
+    return { code: geo.country, name: COUNTRY_NAMES[geo.country] || geo.country, city: geo.city || '' };
   }
   return { code: 'XX', name: 'Unknown', city: '' };
 }
