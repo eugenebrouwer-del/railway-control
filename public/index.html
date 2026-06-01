@@ -126,6 +126,25 @@
       text-align: center;
     }
 
+    /* ADDED: audio mute button on cab cam */
+    .audio-btn {
+      position: absolute;
+      top: 6px; right: 8px;
+      font-size: .65rem;
+      color: var(--muted);
+      background: rgba(0,0,0,.6);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 10px;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .audio-btn.active {
+      color: var(--green);
+      border-color: var(--green);
+    }
+
     /* ── Controls panel ── */
     .controls {
       background: var(--surface);
@@ -401,10 +420,8 @@
       color: var(--red);
     }
 
-    /* ── Function buttons (lights + horn) ── */
-    .fn-section {
-      flex-shrink: 0;
-    }
+    /* ── Function buttons ── */
+    .fn-section { flex-shrink: 0; }
 
     .fn-header {
       font-size: .65rem;
@@ -414,10 +431,7 @@
       margin-bottom: 6px;
     }
 
-    .fn-row {
-      display: flex;
-      gap: 8px;
-    }
+    .fn-row { display: flex; gap: 8px; }
 
     .fn-btn {
       flex: 1;
@@ -441,7 +455,6 @@
 
     .fn-btn .fn-icon { font-size: 1.3rem; }
 
-    /* Lights on state */
     .fn-btn.lights-on {
       background: rgba(255,235,59,.12);
       border-color: var(--yellow);
@@ -449,7 +462,6 @@
       box-shadow: 0 0 12px rgba(255,235,59,.2);
     }
 
-    /* Horn active state */
     .fn-btn.horn-active {
       background: rgba(245,166,35,.2);
       border-color: var(--amber);
@@ -582,6 +594,11 @@
     <div class="dot" id="piDot"></div>
     <span id="piLabel">Pi offline</span>
   </div>
+  <!-- ADDED: cab Pi connection status -->
+  <div class="status-pill">
+    <div class="dot" id="cabDot"></div>
+    <span id="cabLabel">Cab offline</span>
+  </div>
   <div class="status-pill">
     👁 <span id="viewerCount">—</span>
   </div>
@@ -601,6 +618,13 @@
       <span class="cam-label">CAM 2 · OVERVIEW</span>
       <img id="cam2" src="" alt="" style="display:none">
       <div class="cam-offline" id="cam2offline">No signal</div>
+    </div>
+    <!-- ADDED: cab camera viewport -->
+    <div class="cam-box">
+      <span class="cam-label">CAM 3 · CAB VIEW</span>
+      <button class="audio-btn" id="audioBtn">🔇 Audio off</button>
+      <img id="cam3" src="" alt="" style="display:none">
+      <div class="cam-offline" id="cam3offline">No signal</div>
     </div>
   </div>
 
@@ -745,6 +769,9 @@ const socket = io();
 // ── DOM refs ──────────────────────────────────────────────────────
 const piDot            = document.getElementById('piDot');
 const piLabel          = document.getElementById('piLabel');
+// ADDED: cab status refs
+const cabDot           = document.getElementById('cabDot');
+const cabLabel         = document.getElementById('cabLabel');
 const viewerCount      = document.getElementById('viewerCount');
 const driverLabel      = document.getElementById('driverLabel');
 const driverCountryRow = document.getElementById('driverCountryRow');
@@ -781,28 +808,75 @@ const cam1img          = document.getElementById('cam1');
 const cam1offline      = document.getElementById('cam1offline');
 const cam2img          = document.getElementById('cam2');
 const cam2offline      = document.getElementById('cam2offline');
+// ADDED: cab cam refs
+const cam3img          = document.getElementById('cam3');
+const cam3offline      = document.getElementById('cam3offline');
+const audioBtn         = document.getElementById('audioBtn');
+
+// ── ADDED: Cab audio playback ─────────────────────────────────────
+let audioCtx        = null;
+let audioEnabled    = false;
+let nextPlayTime    = 0;
+
+function initAudioCtx() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  nextPlayTime = audioCtx.currentTime;
+}
+
+audioBtn.addEventListener('click', () => {
+  audioEnabled = !audioEnabled;
+  if (audioEnabled) {
+    initAudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    audioBtn.textContent = '🔊 Audio on';
+    audioBtn.classList.add('active');
+  } else {
+    audioBtn.textContent = '🔇 Audio off';
+    audioBtn.classList.remove('active');
+  }
+});
+
+socket.on('cam:cab_audio', ({ data, rate }) => {
+  if (!audioEnabled || !audioCtx) return;
+  try {
+    const raw    = atob(data);
+    const pcm16  = new Int16Array(raw.length / 2);
+    for (let i = 0; i < pcm16.length; i++) {
+      pcm16[i] = (raw.charCodeAt(i * 2)) | (raw.charCodeAt(i * 2 + 1) << 8);
+    }
+    const float32 = new Float32Array(pcm16.length);
+    for (let i = 0; i < pcm16.length; i++) {
+      float32[i] = pcm16[i] / 32768.0;
+    }
+    const buffer = audioCtx.createBuffer(1, float32.length, rate || 16000);
+    buffer.getChannelData(0).set(float32);
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    // Schedule chunks back-to-back to avoid gaps
+    const startAt = Math.max(nextPlayTime, audioCtx.currentTime + 0.05);
+    source.start(startAt);
+    nextPlayTime = startAt + buffer.duration;
+  } catch (e) {
+    console.warn('Audio playback error:', e);
+  }
+});
 
 // ── Train Horn — Web Audio synthesizer ───────────────────────────
-// Classic train horn chord (simplified K5LA): Eb, F#, Bb, Db
 const HORN_FREQS = [311, 370, 466, 554];
 
 function startHorn() {
   if (hornSound) return;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-    // Master gain with attack
     const master = ctx.createGain();
     master.gain.setValueAtTime(0, ctx.currentTime);
     master.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.08);
-
-    // Warmth filter — low-pass to take the edge off sawtooth
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 900;
     filter.Q.value = 1.2;
-
-    // Slight reverb via a short delay
     const delay = ctx.createDelay(0.05);
     delay.delayTime.value = 0.03;
     const delayGain = ctx.createGain();
@@ -810,15 +884,12 @@ function startHorn() {
     master.connect(delay);
     delay.connect(delayGain);
     delayGain.connect(filter);
-
     master.connect(filter);
     filter.connect(ctx.destination);
-
-    // One oscillator per frequency, slightly detuned for richness
     const oscs = HORN_FREQS.map((freq, i) => {
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
-      osc.frequency.value = freq + (i % 2 === 0 ? 1.5 : -1.5); // slight detune
+      osc.frequency.value = freq + (i % 2 === 0 ? 1.5 : -1.5);
       const oscGain = ctx.createGain();
       oscGain.gain.value = 0.6 / HORN_FREQS.length;
       osc.connect(oscGain);
@@ -826,7 +897,6 @@ function startHorn() {
       osc.start();
       return osc;
     });
-
     hornSound = { ctx, master, oscs };
   } catch (e) {
     console.warn('Web Audio not available:', e);
@@ -837,7 +907,6 @@ function stopHorn() {
   if (!hornSound) return;
   try {
     const { ctx, master, oscs } = hornSound;
-    // Release envelope
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
     master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
@@ -849,7 +918,7 @@ function stopHorn() {
   hornSound = null;
 }
 
-// ── Horn button — press and hold ──────────────────────────────────
+// ── Horn button ───────────────────────────────────────────────────
 function hornOn() {
   if (!isMyTurn) return;
   btnHorn.classList.add('horn-active');
@@ -868,7 +937,7 @@ btnHorn.addEventListener('pointerup',   () => hornOff());
 btnHorn.addEventListener('pointerleave',() => hornOff());
 btnHorn.addEventListener('contextmenu', (e) => e.preventDefault());
 
-// ── Lights button — toggle ────────────────────────────────────────
+// ── Lights button ─────────────────────────────────────────────────
 btnLights.addEventListener('click', () => {
   if (!isMyTurn) return;
   lightsOn = !lightsOn;
@@ -903,13 +972,11 @@ function updateHandlePosition() {
   const pct = speed / 100;
   throttleHandle.style.bottom = `${pct * (h - 2)}px`;
   throttleFill.style.height   = `${pct * 100}%`;
-
   let color;
   if (speed === 0)       color = '#333';
   else if (speed < 35)   color = '#4caf50';
   else if (speed < 70)   color = '#f5a623';
   else                   color = '#e53935';
-
   throttleFill.style.background   = color;
   throttleHandle.style.background = speed === 0 ? '#d0d0e0' : color;
   throttleHandle.style.boxShadow  = speed > 0 ? `0 0 10px ${color}88` : '';
@@ -1042,7 +1109,6 @@ function setControlsEnabled(enabled) {
     hideAllOverlays();
   } else {
     controlPanel.classList.add('controls-disabled');
-    // Reset function states
     lightsOn = false;
     updateLightsUI();
     hornOff();
@@ -1061,6 +1127,16 @@ socket.on('pi:disconnected', () => {
   piLabel.textContent = 'Pi offline';
   showOverlay(overlayPiOffline);
   setControlsEnabled(false);
+});
+
+// ADDED: cam:cab_frame handler
+socket.on('cam:cab_frame', (data) => {
+  cam3img.src = `data:image/jpeg;base64,${data.data}`;
+  cam3img.style.display     = 'block';
+  cam3offline.style.display = 'none';
+  // Update cab dot to green on first frame
+  cabDot.className  = 'dot green';
+  cabLabel.textContent = 'Cab online';
 });
 
 socket.on('queue:active', (data) => {
@@ -1183,7 +1259,8 @@ socket.on('ping', () => socket.emit('pong'));
 // Init
 setControlsEnabled(false);
 updateHandlePosition();
-piDot.className = 'dot red';
+piDot.className  = 'dot red';
+cabDot.className = 'dot red';
 </script>
 </body>
 </html>
