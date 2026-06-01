@@ -2,6 +2,7 @@
  * server.js — bigtrainset.com cloud server
  * Changes: 2-min drive slots, country detection, stats tracking,
  *          inactivity auto-stop (1 min), new admin /stats endpoint
+ *          + multi-Pi support (main Pi + cab Pi)
  */
 
 const express = require('express');
@@ -82,11 +83,15 @@ function countryFromSocket(socket) {
 }
 
 // ── Runtime state ─────────────────────────────────────────────────
-let piSocket     = null;
-let queue        = [];           // ordered array of visitor socket objects
-let activeSlot   = null;         // { socketId, startTime, timers… }
+// CHANGED: replaced single piSocket with a Map to support multiple Pi devices
+const piSockets  = new Map();          // deviceId → socket  e.g. 'main', 'cab'
+let queue        = [];                 // ordered array of visitor socket objects
+let activeSlot   = null;              // { socketId, startTime, timers… }
 let currentTrain = { speed: 0, direction: 'fwd' };
 let viewers      = 0;
+
+// Helper to get the main Pi socket (keeps rest of code clean)
+function mainPi() { return piSockets.get('main') || null; }
 
 // ── Queue helpers ─────────────────────────────────────────────────
 function broadcastQueueState() {
@@ -104,14 +109,14 @@ function broadcastQueueState() {
                       ? Math.max(0, SLOT_DURATION_MS - (Date.now() - activeSlot.startTime))
                       : 0,
       viewerCount:  viewers,
-      activeDriver                      // { code, name, city } or null
+      activeDriver
     });
   });
 }
 
 function stopTrain() {
   currentTrain = { speed: 0, direction: currentTrain.direction };
-  if (piSocket) piSocket.emit('train:control', currentTrain);
+  if (mainPi()) mainPi().emit('train:control', currentTrain);
   io.emit('train:update', currentTrain);
 }
 
@@ -127,7 +132,6 @@ function resetInactivityTimer() {
     if (activeSlot[t]) clearTimeout(activeSlot[t]);
   });
 
-  // Warn at 50 s, stop at 60 s
   activeSlot.inactivityWarnTimer = setTimeout(() => {
     const s = io.sockets.sockets.get(activeSlot?.socketId);
     if (s) s.emit('train:inactivity-warning', { secondsLeft: 10 });
@@ -138,12 +142,11 @@ function resetInactivityTimer() {
     const s = io.sockets.sockets.get(activeSlot?.socketId);
     if (s) s.emit('train:inactivity-stop');
     stopTrain();
-    // Don't end the slot — driver still has their time, just train is stopped
   }, INACTIVITY_MS);
 }
 
 function activateNextSlot() {
-  if (queue.length === 0 || !piSocket || activeSlot) return;
+  if (queue.length === 0 || !mainPi() || activeSlot) return;
 
   const socket = queue[0];
   activeSlot = {
@@ -153,7 +156,6 @@ function activateNextSlot() {
     inactivityTimer: null, inactivityWarnTimer: null
   };
 
-  // End-of-slot warning at 10 s before expiry
   activeSlot.warningTimer = setTimeout(() => {
     const s = io.sockets.sockets.get(activeSlot?.socketId);
     if (s) s.emit('queue:warning', { secondsLeft: 10 });
@@ -175,7 +177,6 @@ function activateNextSlot() {
 function endSlot(socketId, moveToBack = false) {
   if (!activeSlot || activeSlot.socketId !== socketId) return;
 
-  // Accumulate driving time
   stats.totalDrivingMs += Date.now() - activeSlot.startTime;
   saveStats();
 
@@ -201,9 +202,7 @@ function endSlot(socketId, moveToBack = false) {
 io.on('connection', (socket) => {
   const isPi = socket.handshake.auth?.secret === PI_SECRET;
 
-  if (isPi) {
-    // Pi self-identifies via socket.handshake.auth or via pi:register below
-  } else {
+  if (!isPi) {
     // Visitor
     socket.country = countryFromSocket(socket);
     stats.totalVisitors++;
@@ -217,22 +216,32 @@ io.on('connection', (socket) => {
       if (!io.sockets.sockets.has(socket.id)) return;
       if (queue.length >= MAX_QUEUE) { socket.emit('queue:full'); return; }
       queue.push(socket);
-      if (!activeSlot && piSocket) activateNextSlot();
+      if (!activeSlot && mainPi()) activateNextSlot();
       else broadcastQueueState();
     }, 1000);
   }
 
-  // ── Pi events ────────────────────────────────────────────────
+  // ── Pi events ─────────────────────────────────────────────────
+  // CHANGED: updated pi:register to support multiple Pi devices via 'device' field
   socket.on('pi:register', (data) => {
     if (data?.secret !== PI_SECRET) { socket.disconnect(); return; }
-    piSocket = socket;
-    console.log('[pi] registered');
+    const deviceId = data.device || 'main';
+    piSockets.set(deviceId, socket);
+    console.log(`[pi] registered: ${deviceId}`);
     io.emit('pi:connected');
-    if (queue.length > 0 && !activeSlot) setTimeout(activateNextSlot, 1000);
+    if (deviceId === 'main' && queue.length > 0 && !activeSlot) {
+      setTimeout(activateNextSlot, 1000);
+    }
   });
 
+  // Existing camera frame relays — unchanged
   socket.on('pi:frame',  (data) => io.emit('cam:frame',  data));
   socket.on('pi:frame1', (data) => io.emit('cam:frame1', data));
+
+  // ADDED: cab Pi camera and audio relays
+  socket.on('pi:cab_frame', (data) => io.emit('cam:cab_frame', data));
+  socket.on('pi:cab_audio', (data) => io.emit('cam:cab_audio', data));
+
   socket.on('pong', () => {});
 
   // ── Visitor → train control ───────────────────────────────────
@@ -242,29 +251,39 @@ io.on('connection', (socket) => {
       return;
     }
     currentTrain = { speed: data.speed, direction: data.direction };
-    if (piSocket) piSocket.emit('train:control', currentTrain);
+    if (mainPi()) mainPi().emit('train:control', currentTrain);
     io.emit('train:update', currentTrain);
-    resetInactivityTimer();   // any command resets the 1-min inactivity clock
+    resetInactivityTimer();
   });
 
   socket.on('train:function', (data) => {
     if (!activeSlot || activeSlot.socketId !== socket.id) return;
-    if (piSocket) piSocket.emit('train:function', data);
+    if (mainPi()) mainPi().emit('train:function', data);
   });
 
   socket.on('ping', () => socket.emit('pong'));
 
   // ── Disconnect ────────────────────────────────────────────────
   socket.on('disconnect', () => {
-    if (socket === piSocket) {
-      piSocket = null;
-      console.log('[pi] disconnected');
-      io.emit('pi:disconnected');
-      clearSlotTimers();
-      activeSlot = null;
-      stopTrain();
-      broadcastQueueState();
+    // CHANGED: check all Pi devices, not just single piSocket
+    let disconnectedDevice = null;
+    for (const [deviceId, s] of piSockets.entries()) {
+      if (s === socket) { disconnectedDevice = deviceId; break; }
+    }
+
+    if (disconnectedDevice) {
+      piSockets.delete(disconnectedDevice);
+      console.log(`[pi] disconnected: ${disconnectedDevice}`);
+      // Only affect train/queue if the main Pi disconnected
+      if (disconnectedDevice === 'main') {
+        io.emit('pi:disconnected');
+        clearSlotTimers();
+        activeSlot = null;
+        stopTrain();
+        broadcastQueueState();
+      }
     } else {
+      // Visitor disconnected
       viewers = Math.max(0, viewers - 1);
       const idx = queue.indexOf(socket);
       if (idx !== -1) queue.splice(idx, 1);
@@ -276,8 +295,12 @@ io.on('connection', (socket) => {
 
 // ── HTTP endpoints ────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({
-  ok: true, piConnected: !!piSocket,
-  queueLength: queue.length, viewers, uptime: process.uptime()
+  ok: true,
+  piConnected: piSockets.has('main'),        // CHANGED: uses Map
+  cabConnected: piSockets.has('cab'),        // ADDED: cab Pi status
+  queueLength: queue.length,
+  viewers,
+  uptime: process.uptime()
 }));
 
 function requireAdmin(req, res, next) {
@@ -288,7 +311,7 @@ function requireAdmin(req, res, next) {
 
 app.post('/admin/estop', requireAdmin, (req, res) => {
   stopTrain();
-  if (piSocket) piSocket.emit('train:estop');
+  if (mainPi()) mainPi().emit('train:estop');
   io.emit('queue:estop');
   clearSlotTimers();
   activeSlot = null;
@@ -307,14 +330,15 @@ app.get('/admin/stats', requireAdmin, (req, res) => {
     }));
 
   res.json({
-    totalVisitors:     stats.totalVisitors,
-    totalDrivingHours: parseFloat(hours),
-    totalDrivingMs:    stats.totalDrivingMs,
-    sessionStart:      stats.sessionStart,
-    currentViewers:    viewers,
+    totalVisitors:      stats.totalVisitors,
+    totalDrivingHours:  parseFloat(hours),
+    totalDrivingMs:     stats.totalDrivingMs,
+    sessionStart:       stats.sessionStart,
+    currentViewers:     viewers,
     currentQueueLength: queue.length,
-    piConnected:       !!piSocket,
-    countryCounts:     countryList
+    piConnected:        piSockets.has('main'),   // CHANGED
+    cabConnected:       piSockets.has('cab'),     // ADDED
+    countryCounts:      countryList
   });
 });
 
