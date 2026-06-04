@@ -3,6 +3,8 @@
  * Changes: 2-min drive slots, country detection, stats tracking,
  *          inactivity auto-stop (1 min), new admin /stats endpoint
  *          + multi-Pi support (main Pi + cab Pi)
+ *          + camera frames removed — now served directly via WebRTC/HLS
+ *            from home streaming server (stream.bigtrainset.com)
  */
 
 const express = require('express');
@@ -83,14 +85,13 @@ function countryFromSocket(socket) {
 }
 
 // ── Runtime state ─────────────────────────────────────────────────
-// CHANGED: replaced single piSocket with a Map to support multiple Pi devices
 const piSockets  = new Map();          // deviceId → socket  e.g. 'main', 'cab'
 let queue        = [];                 // ordered array of visitor socket objects
 let activeSlot   = null;              // { socketId, startTime, timers… }
 let currentTrain = { speed: 0, direction: 'fwd' };
 let viewers      = 0;
 
-// Helper to get the main Pi socket (keeps rest of code clean)
+// Helper to get the main Pi socket
 function mainPi() { return piSockets.get('main') || null; }
 
 // ── Queue helpers ─────────────────────────────────────────────────
@@ -222,7 +223,6 @@ io.on('connection', (socket) => {
   }
 
   // ── Pi events ─────────────────────────────────────────────────
-  // CHANGED: updated pi:register to support multiple Pi devices via 'device' field
   socket.on('pi:register', (data) => {
     if (data?.secret !== PI_SECRET) { socket.disconnect(); return; }
     const deviceId = data.device || 'main';
@@ -234,13 +234,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Existing camera frame relays — unchanged
-  socket.on('pi:frame',  (data) => io.emit('cam:frame',  data));
-  socket.on('pi:frame1', (data) => io.emit('cam:frame1', data));
-
-  // ADDED: cab Pi camera and audio relays
-  socket.on('pi:cab_frame', (data) => io.emit('cam:cab_frame', data));
-  socket.on('pi:cab_audio', (data) => io.emit('cam:cab_audio', data));
+  // NOTE: Camera frame relay events removed.
+  // Cameras now stream directly to visitors via WebRTC/HLS
+  // from the home streaming server at stream.bigtrainset.com
+  // and webrtc.bigtrainset.com — no relay through this server needed.
 
   socket.on('pong', () => {});
 
@@ -265,7 +262,6 @@ io.on('connection', (socket) => {
 
   // ── Disconnect ────────────────────────────────────────────────
   socket.on('disconnect', () => {
-    // CHANGED: check all Pi devices, not just single piSocket
     let disconnectedDevice = null;
     for (const [deviceId, s] of piSockets.entries()) {
       if (s === socket) { disconnectedDevice = deviceId; break; }
@@ -274,7 +270,6 @@ io.on('connection', (socket) => {
     if (disconnectedDevice) {
       piSockets.delete(disconnectedDevice);
       console.log(`[pi] disconnected: ${disconnectedDevice}`);
-      // Only affect train/queue if the main Pi disconnected
       if (disconnectedDevice === 'main') {
         io.emit('pi:disconnected');
         clearSlotTimers();
@@ -296,11 +291,11 @@ io.on('connection', (socket) => {
 // ── HTTP endpoints ────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({
   ok: true,
-  piConnected: piSockets.has('main'),        // CHANGED: uses Map
-  cabConnected: piSockets.has('cab'),        // ADDED: cab Pi status
-  queueLength: queue.length,
+  piConnected:  piSockets.has('main'),
+  cabConnected: piSockets.has('cab'),
+  queueLength:  queue.length,
   viewers,
-  uptime: process.uptime()
+  uptime:       process.uptime()
 }));
 
 function requireAdmin(req, res, next) {
@@ -336,8 +331,8 @@ app.get('/admin/stats', requireAdmin, (req, res) => {
     sessionStart:       stats.sessionStart,
     currentViewers:     viewers,
     currentQueueLength: queue.length,
-    piConnected:        piSockets.has('main'),   // CHANGED
-    cabConnected:       piSockets.has('cab'),     // ADDED
+    piConnected:        piSockets.has('main'),
+    cabConnected:       piSockets.has('cab'),
     countryCounts:      countryList
   });
 });
