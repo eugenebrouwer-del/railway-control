@@ -103,10 +103,12 @@
       justify-content: center;
     }
 
-    .cam-box img {
+    /* Video fills the cam box */
+    .cam-box video {
       width: 100%;
       height: 100%;
       object-fit: contain;
+      display: block;
     }
 
     .cam-label {
@@ -118,32 +120,32 @@
       padding: 2px 7px;
       border-radius: 10px;
       letter-spacing: .06em;
+      z-index: 2;
     }
 
     .cam-offline {
       color: var(--muted);
       font-size: .8rem;
       text-align: center;
+      position: absolute;
     }
 
-    /* ADDED: audio mute button on cab cam */
-    .audio-btn {
+    /* Stream quality badge */
+    .stream-badge {
       position: absolute;
       top: 6px; right: 8px;
-      font-size: .65rem;
-      color: var(--muted);
+      font-size: .6rem;
+      color: var(--green);
       background: rgba(0,0,0,.6);
-      border: 1px solid var(--border);
-      padding: 2px 8px;
+      border: 1px solid var(--green);
+      padding: 2px 7px;
       border-radius: 10px;
       letter-spacing: .06em;
-      cursor: pointer;
-      transition: all .15s;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity .3s;
     }
-    .audio-btn.active {
-      color: var(--green);
-      border-color: var(--green);
-    }
+    .stream-badge.visible { opacity: 1; }
 
     /* ── Controls panel ── */
     .controls {
@@ -594,11 +596,6 @@
     <div class="dot" id="piDot"></div>
     <span id="piLabel">Pi offline</span>
   </div>
-  <!-- ADDED: cab Pi connection status -->
-  <div class="status-pill">
-    <div class="dot" id="cabDot"></div>
-    <span id="cabLabel">Cab offline</span>
-  </div>
   <div class="status-pill">
     👁 <span id="viewerCount">—</span>
   </div>
@@ -609,23 +606,23 @@
 
   <!-- Cameras -->
   <div class="cameras">
+
+    <!-- Layout camera — main overview -->
     <div class="cam-box">
-      <span class="cam-label">CAM 1 · FRONT</span>
-      <img id="cam1" src="" alt="" style="display:none">
-      <div class="cam-offline" id="cam1offline">No signal</div>
+      <span class="cam-label">CAM 1 · LAYOUT OVERVIEW</span>
+      <span class="stream-badge" id="layoutBadge">● LIVE</span>
+      <video id="layoutVideo" autoplay muted playsinline></video>
+      <div class="cam-offline" id="layoutOffline">No signal</div>
     </div>
+
+    <!-- Cab camera — driver's eye view -->
     <div class="cam-box">
-      <span class="cam-label">CAM 2 · OVERVIEW</span>
-      <img id="cam2" src="" alt="" style="display:none">
-      <div class="cam-offline" id="cam2offline">No signal</div>
+      <span class="cam-label">CAM 2 · CAB VIEW</span>
+      <span class="stream-badge" id="cabBadge">● LIVE</span>
+      <video id="cabVideo" autoplay muted playsinline></video>
+      <div class="cam-offline" id="cabOffline">No signal</div>
     </div>
-    <!-- ADDED: cab camera viewport -->
-    <div class="cam-box">
-      <span class="cam-label">CAM 3 · CAB VIEW</span>
-      <button class="audio-btn" id="audioBtn">🔇 Audio off</button>
-      <img id="cam3" src="" alt="" style="display:none">
-      <div class="cam-offline" id="cam3offline">No signal</div>
-    </div>
+
   </div>
 
   <!-- Controls -->
@@ -753,6 +750,105 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// ── Stream URLs ───────────────────────────────────────────────────
+// WebRTC for lowest latency, HLS as fallback
+const STREAMS = {
+  layout: {
+    webrtc: 'https://webrtc.bigtrainset.com/layout',
+    hls:    'https://stream.bigtrainset.com/layout/index.m3u8',
+  },
+  cab: {
+    webrtc: 'https://webrtc.bigtrainset.com/cab',
+    hls:    'https://stream.bigtrainset.com/cab/index.m3u8',
+  }
+};
+
+// ── Camera setup ──────────────────────────────────────────────────
+function setupStream(videoEl, badgeEl, offlineEl, urls) {
+  // Try WebRTC first via MediaMTX iframe embed
+  // MediaMTX serves a WebRTC player page directly
+  const parent = videoEl.parentElement;
+
+  // Replace video element with iframe for WebRTC
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;inset:0;';
+  iframe.allow = 'autoplay';
+  iframe.src = urls.webrtc;
+  parent.appendChild(iframe);
+  videoEl.remove();
+
+  // Show live badge when iframe loads
+  iframe.addEventListener('load', () => {
+    badgeEl.classList.add('visible');
+    offlineEl.style.display = 'none';
+  });
+
+  // If iframe fails, fall back to HLS
+  iframe.addEventListener('error', () => {
+    iframe.remove();
+    setupHLS(parent, badgeEl, offlineEl, urls.hls);
+  });
+}
+
+function setupHLS(container, badgeEl, offlineEl, hlsUrl) {
+  const video = document.createElement('video');
+  video.autoplay = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+  container.appendChild(video);
+
+  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+    const hls = new Hls({
+      lowLatencyMode: true,
+      backBufferLength: 5,
+      liveSyncDurationCount: 2,
+    });
+    hls.loadSource(hlsUrl);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play();
+      badgeEl.classList.add('visible');
+      offlineEl.style.display = 'none';
+    });
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        console.warn('HLS fatal error:', data);
+        offlineEl.style.display = 'block';
+        badgeEl.classList.remove('visible');
+        setTimeout(() => setupHLS(container, badgeEl, offlineEl, hlsUrl), 5000);
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari native HLS
+    video.src = hlsUrl;
+    video.addEventListener('loadedmetadata', () => {
+      video.play();
+      badgeEl.classList.add('visible');
+      offlineEl.style.display = 'none';
+    });
+  } else {
+    offlineEl.style.display = 'block';
+    offlineEl.textContent = 'Browser not supported';
+  }
+}
+
+// Initialise both streams when page loads
+window.addEventListener('load', () => {
+  setupStream(
+    document.getElementById('layoutVideo'),
+    document.getElementById('layoutBadge'),
+    document.getElementById('layoutOffline'),
+    STREAMS.layout
+  );
+  setupStream(
+    document.getElementById('cabVideo'),
+    document.getElementById('cabBadge'),
+    document.getElementById('cabOffline'),
+    STREAMS.cab
+  );
+});
+
 // ── State ─────────────────────────────────────────────────────────
 let speed       = 0;
 let direction   = 'fwd';
@@ -769,9 +865,6 @@ const socket = io();
 // ── DOM refs ──────────────────────────────────────────────────────
 const piDot            = document.getElementById('piDot');
 const piLabel          = document.getElementById('piLabel');
-// ADDED: cab status refs
-const cabDot           = document.getElementById('cabDot');
-const cabLabel         = document.getElementById('cabLabel');
 const viewerCount      = document.getElementById('viewerCount');
 const driverLabel      = document.getElementById('driverLabel');
 const driverCountryRow = document.getElementById('driverCountryRow');
@@ -804,64 +897,6 @@ const overlayWaitMsg   = document.getElementById('overlayWaitMsg');
 const overlayYourTurn  = document.getElementById('overlayYourTurn');
 const overlaySlotEnded = document.getElementById('overlaySlotEnded');
 const overlayPiOffline = document.getElementById('overlayPiOffline');
-const cam1img          = document.getElementById('cam1');
-const cam1offline      = document.getElementById('cam1offline');
-const cam2img          = document.getElementById('cam2');
-const cam2offline      = document.getElementById('cam2offline');
-// ADDED: cab cam refs
-const cam3img          = document.getElementById('cam3');
-const cam3offline      = document.getElementById('cam3offline');
-const audioBtn         = document.getElementById('audioBtn');
-
-// ── ADDED: Cab audio playback ─────────────────────────────────────
-let audioCtx        = null;
-let audioEnabled    = false;
-let nextPlayTime    = 0;
-
-function initAudioCtx() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-  nextPlayTime = audioCtx.currentTime;
-}
-
-audioBtn.addEventListener('click', () => {
-  audioEnabled = !audioEnabled;
-  if (audioEnabled) {
-    initAudioCtx();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    audioBtn.textContent = '🔊 Audio on';
-    audioBtn.classList.add('active');
-  } else {
-    audioBtn.textContent = '🔇 Audio off';
-    audioBtn.classList.remove('active');
-  }
-});
-
-socket.on('cam:cab_audio', ({ data, rate }) => {
-  if (!audioEnabled || !audioCtx) return;
-  try {
-    const raw    = atob(data);
-    const pcm16  = new Int16Array(raw.length / 2);
-    for (let i = 0; i < pcm16.length; i++) {
-      pcm16[i] = (raw.charCodeAt(i * 2)) | (raw.charCodeAt(i * 2 + 1) << 8);
-    }
-    const float32 = new Float32Array(pcm16.length);
-    for (let i = 0; i < pcm16.length; i++) {
-      float32[i] = pcm16[i] / 32768.0;
-    }
-    const buffer = audioCtx.createBuffer(1, float32.length, rate || 16000);
-    buffer.getChannelData(0).set(float32);
-    const source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioCtx.destination);
-    // Schedule chunks back-to-back to avoid gaps
-    const startAt = Math.max(nextPlayTime, audioCtx.currentTime + 0.05);
-    source.start(startAt);
-    nextPlayTime = startAt + buffer.duration;
-  } catch (e) {
-    console.warn('Audio playback error:', e);
-  }
-});
 
 // ── Train Horn — Web Audio synthesizer ───────────────────────────
 const HORN_FREQS = [311, 370, 466, 554];
@@ -1129,16 +1164,6 @@ socket.on('pi:disconnected', () => {
   setControlsEnabled(false);
 });
 
-// ADDED: cam:cab_frame handler
-socket.on('cam:cab_frame', (data) => {
-  cam3img.src = `data:image/jpeg;base64,${data.data}`;
-  cam3img.style.display     = 'block';
-  cam3offline.style.display = 'none';
-  // Update cab dot to green on first frame
-  cabDot.className  = 'dot green';
-  cabLabel.textContent = 'Cab online';
-});
-
 socket.on('queue:active', (data) => {
   isMyTurn = true;
   setControlsEnabled(true);
@@ -1242,25 +1267,12 @@ socket.on('train:inactivity-stop', () => {
   }, 3000);
 });
 
-socket.on('cam:frame1', (data) => {
-  cam1img.src = `data:image/jpeg;base64,${data.data}`;
-  cam1img.style.display  = 'block';
-  cam1offline.style.display = 'none';
-});
-
-socket.on('cam:frame', (data) => {
-  cam2img.src = `data:image/jpeg;base64,${data.data}`;
-  cam2img.style.display  = 'block';
-  cam2offline.style.display = 'none';
-});
-
 socket.on('ping', () => socket.emit('pong'));
 
 // Init
 setControlsEnabled(false);
 updateHandlePosition();
-piDot.className  = 'dot red';
-cabDot.className = 'dot red';
+piDot.className = 'dot red';
 </script>
 </body>
 </html>
