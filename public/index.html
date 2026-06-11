@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Big Train Set — Live Control</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
   <style>
     :root {
       --bg:       #0d0d0f;
@@ -20,9 +21,7 @@
       --track-h:  260px;
       --handle-r: 22px;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       background: var(--bg);
       color: var(--text);
@@ -32,8 +31,6 @@
       flex-direction: column;
       overflow: hidden;
     }
-
-    /* ── Header ── */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -43,7 +40,6 @@
       gap: 12px;
       flex-shrink: 0;
     }
-
     header h1 {
       font-size: 1rem;
       font-weight: 700;
@@ -51,7 +47,6 @@
       color: var(--amber);
       flex: 1;
     }
-
     .status-pill {
       display: flex;
       align-items: center;
@@ -63,7 +58,6 @@
       font-size: .72rem;
       color: var(--muted);
     }
-
     .dot {
       width: 7px; height: 7px;
       border-radius: 50%;
@@ -73,16 +67,12 @@
     .dot.green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
     .dot.red    { background: var(--red);   box-shadow: 0 0 6px var(--red); }
     .dot.amber  { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-
-    /* ── Main layout ── */
     main {
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 320px;
       overflow: hidden;
     }
-
-    /* ── Camera panel ── */
     .cameras {
       display: flex;
       flex-direction: column;
@@ -90,7 +80,6 @@
       padding: 6px;
       overflow: hidden;
     }
-
     .cam-box {
       flex: 1;
       background: #050507;
@@ -102,15 +91,13 @@
       align-items: center;
       justify-content: center;
     }
-
-    /* Video fills the cam box */
     .cam-box video {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: block;
+      background: #000;
     }
-
     .cam-label {
       position: absolute;
       top: 6px; left: 8px;
@@ -121,16 +108,15 @@
       border-radius: 10px;
       letter-spacing: .06em;
       z-index: 2;
+      pointer-events: none;
     }
-
     .cam-offline {
       color: var(--muted);
       font-size: .8rem;
       text-align: center;
       position: absolute;
+      pointer-events: none;
     }
-
-    /* Stream quality badge */
     .stream-badge {
       position: absolute;
       top: 6px; right: 8px;
@@ -144,10 +130,9 @@
       z-index: 2;
       opacity: 0;
       transition: opacity .3s;
+      pointer-events: none;
     }
     .stream-badge.visible { opacity: 1; }
-
-    /* ── Controls panel ── */
     .controls {
       background: var(--surface);
       border-left: 1px solid var(--border);
@@ -157,8 +142,6 @@
       gap: 8px;
       overflow-y: auto;
     }
-
-    /* ── Driver info ── */
     .driver-info {
       background: #0d0d0f;
       border: 1px solid var(--border);
@@ -173,14 +156,12 @@
       gap: 4px;
       flex-shrink: 0;
     }
-
     .driver-info .label {
       font-size: .65rem;
       color: var(--muted);
       letter-spacing: .1em;
       text-transform: uppercase;
     }
-
     .driver-info .country-row {
       display: flex;
       align-items: center;
@@ -188,19 +169,12 @@
       font-size: .9rem;
       font-weight: 600;
     }
-
     .driver-info img.flag {
-      width: 24px;
-      height: 18px;
+      width: 24px; height: 18px;
       border-radius: 2px;
       object-fit: cover;
     }
-
-    .driver-info .city {
-      font-size: .7rem;
-      color: var(--muted);
-    }
-
+    .driver-info .city { font-size: .7rem; color: var(--muted); }
     .your-turn-badge {
       background: var(--amber);
       color: #000;
@@ -210,63 +184,13 @@
       padding: 2px 8px;
       border-radius: 10px;
     }
-
-    /* ── Time bar ── */
-    .time-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    .time-bar-wrap {
-      flex: 1;
-      height: 5px;
-      background: #0d0d0f;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .time-bar {
-      height: 100%;
-      background: var(--amber);
-      border-radius: 3px;
-      width: 100%;
-      transition: width .5s linear;
-    }
-
-    .time-label {
-      font-size: .75rem;
-      color: var(--muted);
-      min-width: 36px;
-      text-align: right;
-    }
-
-    /* ── Throttle section ── */
-    .throttle-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
-    }
-
-    .throttle-header {
-      font-size: .65rem;
-      color: var(--muted);
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      align-self: flex-start;
-    }
-
-    .throttle-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      width: 100%;
-      justify-content: center;
-    }
-
+    .time-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .time-bar-wrap { flex: 1; height: 5px; background: #0d0d0f; border-radius: 3px; overflow: hidden; }
+    .time-bar { height: 100%; background: var(--amber); border-radius: 3px; width: 100%; transition: width .5s linear; }
+    .time-label { font-size: .75rem; color: var(--muted); min-width: 36px; text-align: right; }
+    .throttle-section { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+    .throttle-header { font-size: .65rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; align-self: flex-start; }
+    .throttle-row { display: flex; align-items: center; gap: 14px; width: 100%; justify-content: center; }
     .throttle-track-wrap {
       position: relative;
       display: flex;
@@ -276,26 +200,15 @@
       user-select: none;
       touch-action: none;
     }
-
     .throttle-track {
-      width: 10px;
-      height: 100%;
+      width: 10px; height: 100%;
       background: #0d0d0f;
       border: 1px solid var(--border);
       border-radius: 5px;
       position: relative;
       cursor: pointer;
     }
-
-    .throttle-fill {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      border-radius: 5px;
-      transition: height .05s, background .3s;
-    }
-
+    .throttle-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 5px; transition: height .05s, background .3s; }
     .throttle-handle {
       position: absolute;
       left: 50%;
@@ -307,280 +220,102 @@
       border: 3px solid #888;
       cursor: grab;
       transition: box-shadow .15s, background .3s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      bottom: 0;
-      z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+      bottom: 0; z-index: 2;
     }
-
     .throttle-handle:active { cursor: grabbing; }
-
-    .throttle-handle::after {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #666;
-    }
-
-    .throttle-notches {
-      position: absolute;
-      right: -32px;
-      top: 0;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .notch {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: .6rem;
-      color: var(--muted);
-    }
-
-    .notch::before {
-      content: '';
-      display: block;
-      width: 6px;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .throttle-btns {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
+    .throttle-handle::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #666; }
+    .throttle-notches { position: absolute; right: -32px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+    .notch { display: flex; align-items: center; gap: 4px; font-size: .6rem; color: var(--muted); }
+    .notch::before { content: ''; display: block; width: 6px; height: 1px; background: var(--border); }
+    .throttle-btns { display: flex; flex-direction: column; gap: 8px; }
     .th-btn {
       background: #0d0d0f;
       border: 1px solid var(--border);
       color: var(--text);
-      width: 36px;
-      height: 36px;
+      width: 36px; height: 36px;
       border-radius: 8px;
       font-size: 1.1rem;
       cursor: pointer;
       transition: background .15s, border-color .15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
-
     .th-btn:active { background: var(--amber-dim); border-color: var(--amber); }
-
     .speed-readout { text-align: center; }
-
-    .speed-num {
-      font-size: 2.6rem;
-      font-weight: 800;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-      transition: color .3s;
-    }
-
-    .speed-unit {
-      font-size: .65rem;
-      color: var(--muted);
-      letter-spacing: .1em;
-    }
-
-    /* ── Direction buttons ── */
-    .dir-row {
-      display: flex;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
+    .speed-num { font-size: 2.6rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; transition: color .3s; }
+    .speed-unit { font-size: .65rem; color: var(--muted); letter-spacing: .1em; }
+    .dir-row { display: flex; gap: 8px; flex-shrink: 0; }
     .dir-btn {
-      flex: 1;
-      height: 40px;
+      flex: 1; height: 40px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: #0d0d0f;
       color: var(--muted);
-      font-size: .8rem;
-      font-weight: 700;
-      letter-spacing: .1em;
-      cursor: pointer;
-      transition: all .15s;
+      font-size: .8rem; font-weight: 700; letter-spacing: .1em;
+      cursor: pointer; transition: all .15s;
     }
-
-    .dir-btn.active-fwd {
-      background: rgba(76,175,80,.15);
-      border-color: var(--green);
-      color: var(--green);
-    }
-
-    .dir-btn.active-rev {
-      background: rgba(229,57,53,.15);
-      border-color: var(--red);
-      color: var(--red);
-    }
-
-    /* ── Function buttons ── */
+    .dir-btn.active-fwd { background: rgba(76,175,80,.15); border-color: var(--green); color: var(--green); }
+    .dir-btn.active-rev { background: rgba(229,57,53,.15); border-color: var(--red); color: var(--red); }
     .fn-section { flex-shrink: 0; }
-
-    .fn-header {
-      font-size: .65rem;
-      color: var(--muted);
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
+    .fn-header { font-size: .65rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
     .fn-row { display: flex; gap: 8px; }
-
     .fn-btn {
-      flex: 1;
-      height: 52px;
+      flex: 1; height: 52px;
       border-radius: 10px;
       border: 1px solid var(--border);
       background: #0d0d0f;
       color: var(--muted);
-      font-size: .75rem;
-      font-weight: 700;
-      letter-spacing: .06em;
-      cursor: pointer;
-      transition: all .15s;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      line-height: 1;
+      font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+      cursor: pointer; transition: all .15s;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; line-height: 1;
     }
-
     .fn-btn .fn-icon { font-size: 1.3rem; }
-
-    .fn-btn.lights-on {
-      background: rgba(255,235,59,.12);
-      border-color: var(--yellow);
-      color: var(--yellow);
-      box-shadow: 0 0 12px rgba(255,235,59,.2);
-    }
-
-    .fn-btn.horn-active {
-      background: rgba(245,166,35,.2);
-      border-color: var(--amber);
-      color: var(--amber);
-      box-shadow: 0 0 14px rgba(245,166,35,.35);
-      transform: scale(0.97);
-    }
-
-    /* ── Queue status ── */
-    .queue-section {
-      background: #0d0d0f;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: .78rem;
-      flex-shrink: 0;
-    }
-
-    .queue-section .q-row {
-      display: flex;
-      justify-content: space-between;
-      color: var(--muted);
-      margin-bottom: 3px;
-    }
-
+    .fn-btn.lights-on { background: rgba(255,235,59,.12); border-color: var(--yellow); color: var(--yellow); box-shadow: 0 0 12px rgba(255,235,59,.2); }
+    .fn-btn.horn-active { background: rgba(245,166,35,.2); border-color: var(--amber); color: var(--amber); box-shadow: 0 0 14px rgba(245,166,35,.35); transform: scale(0.97); }
+    .queue-section { background: #0d0d0f; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: .78rem; flex-shrink: 0; }
+    .queue-section .q-row { display: flex; justify-content: space-between; color: var(--muted); margin-bottom: 3px; }
     .queue-section .q-row:last-child { margin-bottom: 0; }
     .queue-section .q-row span { color: var(--text); font-weight: 600; }
-
-    /* ── E-stop ── */
     .estop-btn {
-      width: 100%;
-      height: 44px;
+      width: 100%; height: 44px;
       background: rgba(229,57,53,.1);
       border: 1px solid #6b1e1e;
       border-radius: 8px;
       color: #f44;
-      font-size: .85rem;
-      font-weight: 700;
-      letter-spacing: .12em;
-      cursor: pointer;
-      text-transform: uppercase;
-      transition: all .15s;
+      font-size: .85rem; font-weight: 700; letter-spacing: .12em;
+      cursor: pointer; text-transform: uppercase; transition: all .15s;
       flex-shrink: 0;
     }
-
     .estop-btn:hover { background: rgba(229,57,53,.25); border-color: var(--red); }
     .estop-btn:active { background: rgba(229,57,53,.4); }
-
-    /* ── Overlays ── */
     .overlay {
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background: rgba(0,0,0,.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .3s;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity .3s;
     }
-
-    .overlay.visible {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .overlay-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 28px 36px;
-      text-align: center;
-      max-width: 300px;
-    }
-
+    .overlay.visible { opacity: 1; pointer-events: auto; }
+    .overlay-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 36px; text-align: center; max-width: 300px; }
     .overlay-box .icon { font-size: 2.5rem; margin-bottom: 8px; }
-    .overlay-box h2   { font-size: 1.2rem; margin-bottom: 6px; }
-    .overlay-box p    { font-size: .82rem; color: var(--muted); }
-
-    /* Toast */
+    .overlay-box h2 { font-size: 1.2rem; margin-bottom: 6px; }
+    .overlay-box p { font-size: .82rem; color: var(--muted); }
     .toast {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
+      position: fixed; bottom: 20px; left: 50%;
       transform: translateX(-50%) translateY(80px);
-      background: #3d2a00;
-      border: 1px solid var(--amber);
-      color: var(--amber);
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: .82rem;
-      font-weight: 600;
-      text-align: center;
-      z-index: 99;
-      transition: transform .3s;
-      white-space: nowrap;
+      background: #3d2a00; border: 1px solid var(--amber); color: var(--amber);
+      padding: 10px 20px; border-radius: 8px;
+      font-size: .82rem; font-weight: 600; text-align: center;
+      z-index: 99; transition: transform .3s; white-space: nowrap;
     }
-
     .toast.show { transform: translateX(-50%) translateY(0); }
-
-    /* Disabled controls */
     .controls-disabled .throttle-track,
     .controls-disabled .throttle-handle,
     .controls-disabled .dir-btn,
     .controls-disabled .th-btn,
-    .controls-disabled .fn-btn {
-      opacity: .35;
-      pointer-events: none;
-    }
-
-    /* ── Mobile ── */
+    .controls-disabled .fn-btn { opacity: .35; pointer-events: none; }
     @media (max-width: 640px) {
-      main {
-        grid-template-columns: 1fr;
-        grid-template-rows: 38% 1fr;
-      }
+      main { grid-template-columns: 1fr; grid-template-rows: 38% 1fr; }
       .cameras { flex-direction: row; }
       .controls { border-left: none; border-top: 1px solid var(--border); }
       :root { --track-h: 180px; }
@@ -589,7 +324,6 @@
 </head>
 <body>
 
-<!-- ── Header ─────────────────────────────────────────── -->
 <header>
   <h1>🚂 BIG TRAIN SET</h1>
   <div class="status-pill">
@@ -601,35 +335,24 @@
   </div>
 </header>
 
-<!-- ── Main ───────────────────────────────────────────── -->
 <main>
-
-  <!-- Cameras -->
   <div class="cameras">
-
-    <!-- Layout camera — main overview -->
     <div class="cam-box">
       <span class="cam-label">CAM 1 · LAYOUT OVERVIEW</span>
       <span class="stream-badge" id="layoutBadge">● LIVE</span>
       <video id="layoutVideo" autoplay muted playsinline></video>
-      <div class="cam-offline" id="layoutOffline">No signal</div>
+      <div class="cam-offline" id="layoutOffline">Connecting…</div>
     </div>
-
-    <!-- Cab camera — driver's eye view -->
     <div class="cam-box">
       <span class="cam-label">CAM 2 · CAB VIEW</span>
       <span class="stream-badge" id="cabBadge">● LIVE</span>
       <video id="cabVideo" autoplay muted playsinline></video>
-      <div class="cam-offline" id="cabOffline">No signal</div>
+      <div class="cam-offline" id="cabOffline">Connecting…</div>
     </div>
-
   </div>
 
-  <!-- Controls -->
   <div class="controls" id="controlPanel">
-
-    <!-- Driver info -->
-    <div class="driver-info" id="driverInfo">
+    <div class="driver-info">
       <div class="label" id="driverLabel">Waiting for driver…</div>
       <div class="country-row" id="driverCountryRow" style="display:none">
         <img class="flag" id="driverFlag" src="" alt="">
@@ -637,26 +360,18 @@
       </div>
       <div class="city" id="driverCity"></div>
     </div>
-
-    <!-- Time bar -->
     <div class="time-row" id="timeRow" style="display:none">
-      <div class="time-bar-wrap">
-        <div class="time-bar" id="timeBar"></div>
-      </div>
+      <div class="time-bar-wrap"><div class="time-bar" id="timeBar"></div></div>
       <div class="time-label" id="timeLabel">2:00</div>
     </div>
-
-    <!-- Throttle -->
     <div class="throttle-section">
       <div class="throttle-header">Throttle</div>
       <div class="throttle-row">
-
         <div class="throttle-btns">
-          <button class="th-btn" id="btnUp" title="Increase speed">▲</button>
-          <button class="th-btn" id="btnDown" title="Decrease speed">▼</button>
+          <button class="th-btn" id="btnUp">▲</button>
+          <button class="th-btn" id="btnDown">▼</button>
         </div>
-
-        <div class="throttle-track-wrap" id="throttleWrap">
+        <div class="throttle-track-wrap">
           <div class="throttle-track" id="throttleTrack">
             <div class="throttle-fill" id="throttleFill"></div>
             <div class="throttle-handle" id="throttleHandle"></div>
@@ -669,22 +384,16 @@
             <div class="notch">0</div>
           </div>
         </div>
-
         <div class="speed-readout">
           <div class="speed-num" id="speedNum">0</div>
           <div class="speed-unit">SPEED %</div>
         </div>
-
       </div>
     </div>
-
-    <!-- Direction -->
     <div class="dir-row">
       <button class="dir-btn active-fwd" id="btnFwd">▶ FWD</button>
       <button class="dir-btn" id="btnRev">REV ◀</button>
     </div>
-
-    <!-- Functions: Lights + Horn -->
     <div class="fn-section">
       <div class="fn-header">Functions</div>
       <div class="fn-row">
@@ -698,24 +407,17 @@
         </button>
       </div>
     </div>
-
-    <!-- Queue -->
-    <div class="queue-section" id="queueSection">
+    <div class="queue-section">
       <div class="q-row">Position <span id="qPos">—</span></div>
       <div class="q-row">Queue <span id="qLen">—</span></div>
       <div class="q-row">Est. wait <span id="qWait">—</span></div>
     </div>
-
-    <!-- E-stop -->
     <button class="estop-btn" id="estopBtn">⚡ Emergency Stop</button>
-
   </div>
 </main>
 
-<!-- Toast -->
 <div class="toast" id="inactivityToast">⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s</div>
 
-<!-- Overlays -->
 <div class="overlay" id="overlayWaiting">
   <div class="overlay-box">
     <div class="icon">🚂</div>
@@ -723,7 +425,6 @@
     <p id="overlayWaitMsg">Position — of — visitors</p>
   </div>
 </div>
-
 <div class="overlay" id="overlayYourTurn">
   <div class="overlay-box">
     <div class="icon">🟢</div>
@@ -731,7 +432,6 @@
     <p>You have 2 minutes to drive.<br>Use the throttle to control speed.</p>
   </div>
 </div>
-
 <div class="overlay" id="overlaySlotEnded">
   <div class="overlay-box">
     <div class="icon">⏱</div>
@@ -739,7 +439,6 @@
     <p>Thanks for driving. You've been moved to the back of the queue.</p>
   </div>
 </div>
-
 <div class="overlay" id="overlayPiOffline">
   <div class="overlay-box">
     <div class="icon">⚙️</div>
@@ -750,88 +449,85 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  
-// ── Stream URLs ───────────────────────────────────────────────────
-const WHEP_URLS = {
-  layout: 'https://webrtc.bigtrainset.com/layout/whep',
-  cab:    'https://webrtc.bigtrainset.com/cab/whep',
-};
-
-const HLS_URLS = {
-  layout: 'https://stream.bigtrainset.com/layout/index.m3u8',
-  cab:    'https://stream.bigtrainset.com/cab/index.m3u8',
+// ── Stream config ─────────────────────────────────────────────────
+const STREAMS = {
+  layout: {
+    whep: 'https://webrtc.bigtrainset.com/layout/whep',
+    hls:  'https://stream.bigtrainset.com/layout/index.m3u8',
+  },
+  cab: {
+    whep: 'https://webrtc.bigtrainset.com/cab/whep',
+    hls:  'https://stream.bigtrainset.com/cab/index.m3u8',
+  }
 };
 
 // ── WHEP WebRTC player ────────────────────────────────────────────
-async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl) {
+async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCount) {
+  retryCount = retryCount || 0;
+  const pc = new RTCPeerConnection({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    bundlePolicy: 'max-bundle',
+  });
+
+  const ms = new MediaStream();
+  videoEl.srcObject = ms;
+
+  pc.ontrack = (evt) => {
+    ms.addTrack(evt.track);
+    if (evt.track.kind === 'video') {
+      videoEl.play().catch(() => { videoEl.muted = true; videoEl.play(); });
+      badgeEl.classList.add('visible');
+      offlineEl.style.display = 'none';
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    const s = pc.connectionState;
+    if (s === 'failed' || s === 'disconnected' || s === 'closed') {
+      badgeEl.classList.remove('visible');
+      offlineEl.style.display = 'block';
+      offlineEl.textContent = 'Reconnecting…';
+      pc.close();
+      const delay = Math.min(3000 * (retryCount + 1), 15000);
+      setTimeout(() => setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCount + 1), delay);
+    }
+  };
+
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'recvonly' });
+
   try {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-
-    // Add receive-only transceivers
-    pc.addTransceiver('video', { direction: 'recvonly' });
-    pc.addTransceiver('audio', { direction: 'recvonly' });
-
-    // When we get the stream, attach to video element
-    pc.ontrack = (event) => {
-      if (event.track.kind === 'video') {
-        if (!videoEl.srcObject) {
-          videoEl.srcObject = new MediaStream();
-        }
-        videoEl.srcObject.addTrack(event.track);
-        videoEl.play().catch(() => {
-          // Autoplay blocked — mute and retry
-          videoEl.muted = true;
-          videoEl.play();
-        });
-        badgeEl.classList.add('visible');
-        offlineEl.style.display = 'none';
-      }
-    };
-
-    // Handle connection failure
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        console.warn('WebRTC connection lost, retrying in 3s...');
-        badgeEl.classList.remove('visible');
-        pc.close();
-        setTimeout(() => setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl), 3000);
-      }
-    };
-
-    // Create offer
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    // Send offer to MediaMTX WHEP endpoint
-    const response = await fetch(whepUrl, {
+    const resp = await fetch(whepUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/sdp' },
-      body: offer.sdp,
+      body: pc.localDescription.sdp,
     });
 
-    if (!response.ok) throw new Error(`WHEP error: ${response.status}`);
-
-    const answerSdp = await response.text();
-    await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
-
-    console.log(`WebRTC connected: ${whepUrl}`);
+    if (!resp.ok) throw new Error('WHEP ' + resp.status);
+    const sdp = await resp.text();
+    await pc.setRemoteDescription({ type: 'answer', sdp });
 
   } catch (err) {
-    console.warn('WebRTC failed, falling back to HLS:', err);
-    offlineEl.style.display = 'block';
+    console.warn('WebRTC failed, falling back to HLS:', err.message);
+    pc.close();
+    offlineEl.textContent = 'Connecting…';
     setupHLS(videoEl, badgeEl, offlineEl, hlsUrl);
   }
 }
 
 // ── HLS fallback ──────────────────────────────────────────────────
 function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
+  videoEl.srcObject = null;
   if (typeof Hls !== 'undefined' && Hls.isSupported()) {
     const hls = new Hls({
       lowLatencyMode: true,
       backBufferLength: 5,
       liveSyncDurationCount: 2,
+      manifestLoadingMaxRetry: 10,
+      manifestLoadingRetryDelay: 2000,
     });
     hls.loadSource(hlsUrl);
     hls.attachMedia(videoEl);
@@ -841,9 +537,10 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
       badgeEl.classList.add('visible');
       offlineEl.style.display = 'none';
     });
-    hls.on(Hls.Events.ERROR, (event, data) => {
+    hls.on(Hls.Events.ERROR, (e, data) => {
       if (data.fatal) {
         badgeEl.classList.remove('visible');
+        hls.destroy();
         setTimeout(() => setupHLS(videoEl, badgeEl, offlineEl, hlsUrl), 5000);
       }
     });
@@ -853,131 +550,31 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
     videoEl.play();
     badgeEl.classList.add('visible');
     offlineEl.style.display = 'none';
-  }
-}
-
-// ── Add HLS.js for fallback ───────────────────────────────────────
-const hlsScript = document.createElement('script');
-hlsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js';
-hlsScript.onload = () => console.log('HLS.js loaded');
-document.head.appendChild(hlsScript);
-
-// ── Initialise streams on page load ──────────────────────────────
-window.addEventListener('load', () => {
-  const layoutVideo   = document.getElementById('layoutVideo');
-  const layoutBadge   = document.getElementById('layoutBadge');
-  const layoutOffline = document.getElementById('layoutOffline');
-  const cabVideo      = document.getElementById('cabVideo');
-  const cabBadge      = document.getElementById('cabBadge');
-  const cabOffline    = document.getElementById('cabOffline');
-
-  setupWHEP(layoutVideo, layoutBadge, layoutOffline,
-    WHEP_URLS.layout, HLS_URLS.layout);
-
-  setupWHEP(cabVideo, cabBadge, cabOffline,
-    WHEP_URLS.cab, HLS_URLS.cab);
-});
-
-// ── Camera setup ──────────────────────────────────────────────────
-function setupStream(videoEl, badgeEl, offlineEl, urls) {
-  // Try WebRTC first via MediaMTX iframe embed
-  // MediaMTX serves a WebRTC player page directly
-  const parent = videoEl.parentElement;
-
-  // Replace video element with iframe for WebRTC
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;inset:0;';
-  iframe.allow = 'autoplay';
-  iframe.src = urls.webrtc;
-  parent.appendChild(iframe);
-  videoEl.remove();
-
-  // Show live badge when iframe loads
-  iframe.addEventListener('load', () => {
-    badgeEl.classList.add('visible');
-    offlineEl.style.display = 'none';
-  });
-
-  // If iframe fails, fall back to HLS
-  iframe.addEventListener('error', () => {
-    iframe.remove();
-    setupHLS(parent, badgeEl, offlineEl, urls.hls);
-  });
-}
-
-function setupHLS(container, badgeEl, offlineEl, hlsUrl) {
-  const video = document.createElement('video');
-  video.autoplay = true;
-  video.muted = true;
-  video.playsInline = true;
-  video.style.cssText = 'width:100%;height:100%;object-fit:contain;';
-  container.appendChild(video);
-
-  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-    const hls = new Hls({
-      lowLatencyMode: true,
-      backBufferLength: 5,
-      liveSyncDurationCount: 2,
-    });
-    hls.loadSource(hlsUrl);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      video.play();
-      badgeEl.classList.add('visible');
-      offlineEl.style.display = 'none';
-    });
-    hls.on(Hls.Events.ERROR, (event, data) => {
-      if (data.fatal) {
-        console.warn('HLS fatal error:', data);
-        offlineEl.style.display = 'block';
-        badgeEl.classList.remove('visible');
-        setTimeout(() => setupHLS(container, badgeEl, offlineEl, hlsUrl), 5000);
-      }
-    });
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari native HLS
-    video.src = hlsUrl;
-    video.addEventListener('loadedmetadata', () => {
-      video.play();
-      badgeEl.classList.add('visible');
-      offlineEl.style.display = 'none';
-    });
   } else {
-    offlineEl.style.display = 'block';
     offlineEl.textContent = 'Browser not supported';
   }
 }
 
-// Initialise both streams when page loads
-window.addEventListener('load', () => {
-  setupStream(
-    document.getElementById('layoutVideo'),
-    document.getElementById('layoutBadge'),
-    document.getElementById('layoutOffline'),
-    STREAMS.layout
-  );
-  setupStream(
-    document.getElementById('cabVideo'),
-    document.getElementById('cabBadge'),
-    document.getElementById('cabOffline'),
-    STREAMS.cab
-  );
-});
+// Start both streams immediately
+setupWHEP(
+  document.getElementById('layoutVideo'),
+  document.getElementById('layoutBadge'),
+  document.getElementById('layoutOffline'),
+  STREAMS.layout.whep, STREAMS.layout.hls
+);
+setupWHEP(
+  document.getElementById('cabVideo'),
+  document.getElementById('cabBadge'),
+  document.getElementById('cabOffline'),
+  STREAMS.cab.whep, STREAMS.cab.hls
+);
 
-// ── State ─────────────────────────────────────────────────────────
-let speed       = 0;
-let direction   = 'fwd';
-let isMyTurn    = false;
-let lightsOn    = false;
-let slotEndTime = 0;
-let timerTick   = null;
-let inactivityCountdown = null;
-let hornSound   = null;
-const SLOT_MS   = 120_000;
-
+// ── Train control state ───────────────────────────────────────────
+let speed = 0, direction = 'fwd', isMyTurn = false, lightsOn = false;
+let slotEndTime = 0, timerTick = null, inactivityCountdown = null, hornSound = null;
+const SLOT_MS = 120_000;
 const socket = io();
 
-// ── DOM refs ──────────────────────────────────────────────────────
 const piDot            = document.getElementById('piDot');
 const piLabel          = document.getElementById('piLabel');
 const viewerCount      = document.getElementById('viewerCount');
@@ -1013,9 +610,8 @@ const overlayYourTurn  = document.getElementById('overlayYourTurn');
 const overlaySlotEnded = document.getElementById('overlaySlotEnded');
 const overlayPiOffline = document.getElementById('overlayPiOffline');
 
-// ── Train Horn — Web Audio synthesizer ───────────────────────────
+// ── Horn ──────────────────────────────────────────────────────────
 const HORN_FREQS = [311, 370, 466, 554];
-
 function startHorn() {
   if (hornSound) return;
   try {
@@ -1024,35 +620,21 @@ function startHorn() {
     master.gain.setValueAtTime(0, ctx.currentTime);
     master.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.08);
     const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 900;
-    filter.Q.value = 1.2;
-    const delay = ctx.createDelay(0.05);
-    delay.delayTime.value = 0.03;
-    const delayGain = ctx.createGain();
-    delayGain.gain.value = 0.18;
-    master.connect(delay);
-    delay.connect(delayGain);
-    delayGain.connect(filter);
-    master.connect(filter);
-    filter.connect(ctx.destination);
+    filter.type = 'lowpass'; filter.frequency.value = 900; filter.Q.value = 1.2;
+    const delay = ctx.createDelay(0.05); delay.delayTime.value = 0.03;
+    const delayGain = ctx.createGain(); delayGain.gain.value = 0.18;
+    master.connect(delay); delay.connect(delayGain); delayGain.connect(filter);
+    master.connect(filter); filter.connect(ctx.destination);
     const oscs = HORN_FREQS.map((freq, i) => {
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
       osc.frequency.value = freq + (i % 2 === 0 ? 1.5 : -1.5);
-      const oscGain = ctx.createGain();
-      oscGain.gain.value = 0.6 / HORN_FREQS.length;
-      osc.connect(oscGain);
-      oscGain.connect(master);
-      osc.start();
-      return osc;
+      const g = ctx.createGain(); g.gain.value = 0.6 / HORN_FREQS.length;
+      osc.connect(g); g.connect(master); osc.start(); return osc;
     });
     hornSound = { ctx, master, oscs };
-  } catch (e) {
-    console.warn('Web Audio not available:', e);
-  }
+  } catch(e) {}
 }
-
 function stopHorn() {
   if (!hornSound) return;
   try {
@@ -1060,147 +642,73 @@ function stopHorn() {
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
     master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
-    setTimeout(() => {
-      oscs.forEach(o => { try { o.stop(); } catch(e){} });
-      ctx.close();
-    }, 300);
-  } catch (e) {}
+    setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch(e){} }); ctx.close(); }, 300);
+  } catch(e) {}
   hornSound = null;
 }
-
-// ── Horn button ───────────────────────────────────────────────────
-function hornOn() {
-  if (!isMyTurn) return;
-  btnHorn.classList.add('horn-active');
-  startHorn();
-  socket.emit('train:function', { fn: 'horn', state: true });
-}
-
-function hornOff() {
-  btnHorn.classList.remove('horn-active');
-  stopHorn();
-  if (isMyTurn) socket.emit('train:function', { fn: 'horn', state: false });
-}
-
+function hornOn()  { if (!isMyTurn) return; btnHorn.classList.add('horn-active'); startHorn(); socket.emit('train:function', { fn: 'horn', state: true }); }
+function hornOff() { btnHorn.classList.remove('horn-active'); stopHorn(); if (isMyTurn) socket.emit('train:function', { fn: 'horn', state: false }); }
 btnHorn.addEventListener('pointerdown', (e) => { e.preventDefault(); hornOn(); });
 btnHorn.addEventListener('pointerup',   () => hornOff());
 btnHorn.addEventListener('pointerleave',() => hornOff());
 btnHorn.addEventListener('contextmenu', (e) => e.preventDefault());
 
-// ── Lights button ─────────────────────────────────────────────────
+// ── Lights ────────────────────────────────────────────────────────
 btnLights.addEventListener('click', () => {
   if (!isMyTurn) return;
   lightsOn = !lightsOn;
-  updateLightsUI();
+  btnLights.classList.toggle('lights-on', lightsOn);
+  lightsLabel.textContent = lightsOn ? 'LIGHTS ON' : 'LIGHTS OFF';
   socket.emit('train:function', { fn: 'lights', state: lightsOn });
 });
 
-function updateLightsUI() {
-  if (lightsOn) {
-    btnLights.classList.add('lights-on');
-    lightsLabel.textContent = 'LIGHTS ON';
-  } else {
-    btnLights.classList.remove('lights-on');
-    lightsLabel.textContent = 'LIGHTS OFF';
-  }
-}
-
-// ── Throttle drag ─────────────────────────────────────────────────
-function trackHeight() {
-  return throttleTrack.getBoundingClientRect().height;
-}
-
-function setSpeedFromY(clientY) {
-  const rect = throttleTrack.getBoundingClientRect();
-  let pct = (rect.bottom - clientY) / rect.height;
-  pct = Math.max(0, Math.min(1, pct));
-  setSpeed(Math.round(pct * 100));
-}
-
+// ── Throttle ──────────────────────────────────────────────────────
 function updateHandlePosition() {
-  const h   = trackHeight();
+  const h = throttleTrack.getBoundingClientRect().height;
   const pct = speed / 100;
-  throttleHandle.style.bottom = `${pct * (h - 2)}px`;
-  throttleFill.style.height   = `${pct * 100}%`;
-  let color;
-  if (speed === 0)       color = '#333';
-  else if (speed < 35)   color = '#4caf50';
-  else if (speed < 70)   color = '#f5a623';
-  else                   color = '#e53935';
-  throttleFill.style.background   = color;
+  throttleHandle.style.bottom = (pct * (h - 2)) + 'px';
+  throttleFill.style.height = (pct * 100) + '%';
+  const color = speed === 0 ? '#333' : speed < 35 ? '#4caf50' : speed < 70 ? '#f5a623' : '#e53935';
+  throttleFill.style.background = color;
   throttleHandle.style.background = speed === 0 ? '#d0d0e0' : color;
-  throttleHandle.style.boxShadow  = speed > 0 ? `0 0 10px ${color}88` : '';
-  speedNum.style.color             = color;
+  throttleHandle.style.boxShadow = speed > 0 ? '0 0 10px ' + color + '88' : '';
+  speedNum.style.color = color;
 }
-
 function setSpeed(v) {
   speed = Math.max(0, Math.min(100, v));
   speedNum.textContent = speed;
   updateHandlePosition();
-  sendControl();
+  if (isMyTurn) socket.emit('train:control', { speed, direction });
 }
-
 let dragging = false;
-
-throttleHandle.addEventListener('pointerdown', (e) => {
-  if (!isMyTurn) return;
-  dragging = true;
-  throttleHandle.setPointerCapture(e.pointerId);
-  e.preventDefault();
-});
-
-document.addEventListener('pointermove', (e) => {
-  if (!dragging || !isMyTurn) return;
-  setSpeedFromY(e.clientY);
-});
-
+throttleHandle.addEventListener('pointerdown', (e) => { if (!isMyTurn) return; dragging = true; throttleHandle.setPointerCapture(e.pointerId); e.preventDefault(); });
+document.addEventListener('pointermove', (e) => { if (!dragging || !isMyTurn) return; const r = throttleTrack.getBoundingClientRect(); setSpeed(Math.round(Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height)) * 100)); });
 document.addEventListener('pointerup', () => { dragging = false; });
-
-throttleTrack.addEventListener('pointerdown', (e) => {
-  if (!isMyTurn || e.target === throttleHandle) return;
-  setSpeedFromY(e.clientY);
-});
-
+throttleTrack.addEventListener('pointerdown', (e) => { if (!isMyTurn || e.target === throttleHandle) return; const r = throttleTrack.getBoundingClientRect(); setSpeed(Math.round(Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height)) * 100)); });
 btnUp.addEventListener('click',   () => { if (isMyTurn) setSpeed(speed + 5); });
 btnDown.addEventListener('click', () => { if (isMyTurn) setSpeed(speed - 5); });
-
 document.addEventListener('keydown', (e) => {
   if (!isMyTurn) return;
   if (e.key === 'ArrowUp')    { e.preventDefault(); setSpeed(speed + 5); }
   if (e.key === 'ArrowDown')  { e.preventDefault(); setSpeed(speed - 5); }
-  if (e.key === 'ArrowLeft')  { e.preventDefault(); setDirection('rev'); }
-  if (e.key === 'ArrowRight') { e.preventDefault(); setDirection('fwd'); }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); setDir('rev'); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); setDir('fwd'); }
   if (e.key === ' ')          { e.preventDefault(); setSpeed(0); }
-  if (e.key === 'h' || e.key === 'H') { hornOn(); }
-  if (e.key === 'l' || e.key === 'L') { btnLights.click(); }
+  if (e.key === 'h' || e.key === 'H') hornOn();
+  if (e.key === 'l' || e.key === 'L') btnLights.click();
 });
-
-document.addEventListener('keyup', (e) => {
-  if (e.key === 'h' || e.key === 'H') hornOff();
-});
+document.addEventListener('keyup', (e) => { if (e.key === 'h' || e.key === 'H') hornOff(); });
 
 // ── Direction ─────────────────────────────────────────────────────
-function setDirection(dir) {
+function setDir(dir) {
   direction = dir;
   btnFwd.className = 'dir-btn' + (dir === 'fwd' ? ' active-fwd' : '');
   btnRev.className = 'dir-btn' + (dir === 'rev' ? ' active-rev' : '');
-  sendControl();
+  if (isMyTurn) socket.emit('train:control', { speed, direction });
 }
-
-btnFwd.addEventListener('click', () => { if (isMyTurn) setDirection('fwd'); });
-btnRev.addEventListener('click', () => { if (isMyTurn) setDirection('rev'); });
-
-function sendControl() {
-  if (!isMyTurn) return;
-  socket.emit('train:control', { speed, direction });
-}
-
-// ── E-stop ────────────────────────────────────────────────────────
-estopBtn.addEventListener('click', () => {
-  if (!isMyTurn) return;
-  setSpeed(0);
-  hornOff();
-});
+btnFwd.addEventListener('click', () => { if (isMyTurn) setDir('fwd'); });
+btnRev.addEventListener('click', () => { if (isMyTurn) setDir('rev'); });
+estopBtn.addEventListener('click', () => { if (!isMyTurn) return; setSpeed(0); hornOff(); });
 
 // ── Time bar ──────────────────────────────────────────────────────
 function startTimeBar(durationMs, msLeft) {
@@ -1210,12 +718,10 @@ function startTimeBar(durationMs, msLeft) {
   timerTick = setInterval(() => {
     const left = slotEndTime - Date.now();
     if (left <= 0) { clearInterval(timerTick); timeRow.style.display = 'none'; return; }
-    const pct = (left / durationMs) * 100;
-    timeBar.style.width      = pct + '%';
+    timeBar.style.width = (left / durationMs * 100) + '%';
     timeBar.style.background = left < 15000 ? '#e53935' : '#f5a623';
     const s = Math.ceil(left / 1000);
-    const m = Math.floor(s / 60);
-    timeLabel.textContent = `${m}:${String(s % 60).padStart(2,'0')}`;
+    timeLabel.textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
   }, 500);
 }
 
@@ -1227,12 +733,8 @@ function showDriver(country, isMe) {
     driverCity.textContent = '';
     return;
   }
-  driverLabel.innerHTML = isMe
-    ? '<span class="your-turn-badge">YOU ARE DRIVING</span>'
-    : 'Now driving';
-  const cc = country.code.toLowerCase();
-  driverFlag.src = `https://flagcdn.com/32x24/${cc}.png`;
-  driverFlag.alt = country.code;
+  driverLabel.innerHTML = isMe ? '<span class="your-turn-badge">YOU ARE DRIVING</span>' : 'Now driving';
+  driverFlag.src = 'https://flagcdn.com/32x24/' + country.code.toLowerCase() + '.png';
   driverFlag.onerror = () => { driverFlag.style.display = 'none'; };
   driverFlag.style.display = '';
   driverCountry.textContent = country.name;
@@ -1241,150 +743,55 @@ function showDriver(country, isMe) {
 }
 
 // ── Overlays ──────────────────────────────────────────────────────
-function showOverlay(el, ms = 0) {
-  hideAllOverlays();
+function showOverlay(el, ms) {
+  [overlayWaiting, overlayYourTurn, overlaySlotEnded, overlayPiOffline].forEach(o => o.classList.remove('visible'));
   el.classList.add('visible');
   if (ms) setTimeout(() => el.classList.remove('visible'), ms);
 }
-
-function hideAllOverlays() {
-  [overlayWaiting, overlayYourTurn, overlaySlotEnded, overlayPiOffline]
-    .forEach(o => o.classList.remove('visible'));
-}
-
-// ── Controls enable/disable ───────────────────────────────────────
-function setControlsEnabled(enabled) {
-  if (enabled) {
-    controlPanel.classList.remove('controls-disabled');
-    hideAllOverlays();
-  } else {
-    controlPanel.classList.add('controls-disabled');
-    lightsOn = false;
-    updateLightsUI();
-    hornOff();
-  }
+function setControlsEnabled(on) {
+  controlPanel.classList.toggle('controls-disabled', !on);
+  if (!on) { lightsOn = false; btnLights.classList.remove('lights-on'); lightsLabel.textContent = 'LIGHTS OFF'; hornOff(); }
+  else [overlayWaiting, overlayYourTurn, overlaySlotEnded, overlayPiOffline].forEach(o => o.classList.remove('visible'));
 }
 
 // ── Socket events ─────────────────────────────────────────────────
-socket.on('pi:connected', () => {
-  piDot.className = 'dot green';
-  piLabel.textContent = 'Pi online';
-  overlayPiOffline.classList.remove('visible');
-});
-
-socket.on('pi:disconnected', () => {
-  piDot.className = 'dot red';
-  piLabel.textContent = 'Pi offline';
-  showOverlay(overlayPiOffline);
-  setControlsEnabled(false);
-});
-
-socket.on('queue:active', (data) => {
-  isMyTurn = true;
-  setControlsEnabled(true);
-  showOverlay(overlayYourTurn, 2500);
-  showDriver(data.country, true);
-  startTimeBar(data.durationMs, data.durationMs);
-  setSpeed(0);
-});
-
-socket.on('queue:slotended', () => {
-  isMyTurn = false;
-  setControlsEnabled(false);
-  clearInterval(timerTick);
-  timeRow.style.display = 'none';
-  setSpeed(0);
-  showOverlay(overlaySlotEnded, 3000);
-});
-
+socket.on('pi:connected', () => { piDot.className = 'dot green'; piLabel.textContent = 'Pi online'; overlayPiOffline.classList.remove('visible'); });
+socket.on('pi:disconnected', () => { piDot.className = 'dot red'; piLabel.textContent = 'Pi offline'; showOverlay(overlayPiOffline); setControlsEnabled(false); });
+socket.on('queue:active', (data) => { isMyTurn = true; setControlsEnabled(true); showOverlay(overlayYourTurn, 2500); showDriver(data.country, true); startTimeBar(data.durationMs, data.durationMs); setSpeed(0); });
+socket.on('queue:slotended', () => { isMyTurn = false; setControlsEnabled(false); clearInterval(timerTick); timeRow.style.display = 'none'; setSpeed(0); showOverlay(overlaySlotEnded, 3000); });
 socket.on('queue:state', (data) => {
   viewerCount.textContent = data.viewerCount;
-  const pos  = data.myPosition;
-  const len  = data.queueLength;
-  const wait = data.activeId
-    ? ((pos - 1) * 2 + Math.ceil((data.msLeft || 120000) / 60000))
-    : (pos - 1) * 2;
-  qPos.textContent  = `#${pos}`;
-  qLen.textContent  = len;
-  qWait.textContent = wait > 0 ? `~${wait} min` : 'Soon';
-
+  const pos = data.myPosition, len = data.queueLength;
+  const wait = data.activeId ? ((pos-1)*2 + Math.ceil((data.msLeft||120000)/60000)) : (pos-1)*2;
+  qPos.textContent = '#' + pos; qLen.textContent = len; qWait.textContent = wait > 0 ? '~' + wait + ' min' : 'Soon';
   if (!isMyTurn) {
-    if (data.activeDriver) {
-      showDriver(data.activeDriver, false);
-      driverLabel.textContent = 'Now driving';
-    } else {
-      driverCountryRow.style.display = 'none';
-      driverLabel.textContent = 'No active driver';
-    }
-    overlayWaitMsg.textContent = `Position ${pos} of ${len}`;
-    if (!overlayYourTurn.classList.contains('visible') &&
-        !overlaySlotEnded.classList.contains('visible') &&
-        !overlayPiOffline.classList.contains('visible')) {
-      showOverlay(overlayWaiting);
-    }
+    if (data.activeDriver) showDriver(data.activeDriver, false);
+    else { driverCountryRow.style.display = 'none'; driverLabel.textContent = 'No active driver'; }
+    overlayWaitMsg.textContent = 'Position ' + pos + ' of ' + len;
+    if (!overlayYourTurn.classList.contains('visible') && !overlaySlotEnded.classList.contains('visible') && !overlayPiOffline.classList.contains('visible')) showOverlay(overlayWaiting);
   }
 });
-
-socket.on('queue:full', () => {
-  showOverlay(overlayWaiting);
-  overlayWaitMsg.textContent = 'Queue is full — please try again later.';
-});
-
-socket.on('queue:estop', () => {
-  setSpeed(0);
-  hornOff();
-  isMyTurn = false;
-  setControlsEnabled(false);
-});
-
-socket.on('queue:notactive', () => {
-  isMyTurn = false;
-  setControlsEnabled(false);
-});
-
+socket.on('queue:full', () => { showOverlay(overlayWaiting); overlayWaitMsg.textContent = 'Queue is full — please try again later.'; });
+socket.on('queue:estop', () => { setSpeed(0); hornOff(); isMyTurn = false; setControlsEnabled(false); });
+socket.on('queue:notactive', () => { isMyTurn = false; setControlsEnabled(false); });
 socket.on('train:update', (data) => {
-  if (!isMyTurn) {
-    speed = data.speed;
-    direction = data.direction;
-    updateHandlePosition();
-    btnFwd.className = 'dir-btn' + (direction === 'fwd' ? ' active-fwd' : '');
-    btnRev.className = 'dir-btn' + (direction === 'rev' ? ' active-rev' : '');
-    speedNum.textContent = speed;
-  }
+  if (!isMyTurn) { speed = data.speed; direction = data.direction; updateHandlePosition(); btnFwd.className = 'dir-btn' + (direction === 'fwd' ? ' active-fwd' : ''); btnRev.className = 'dir-btn' + (direction === 'rev' ? ' active-rev' : ''); speedNum.textContent = speed; }
 });
-
 socket.on('train:inactivity-warning', (data) => {
   let count = data.secondsLeft || 10;
   inactivityCount.textContent = count;
   inactivityToast.classList.add('show');
   clearInterval(inactivityCountdown);
-  inactivityCountdown = setInterval(() => {
-    count--;
-    inactivityCount.textContent = count;
-    if (count <= 0) {
-      clearInterval(inactivityCountdown);
-      setTimeout(() => inactivityToast.classList.remove('show'), 500);
-    }
-  }, 1000);
+  inactivityCountdown = setInterval(() => { count--; inactivityCount.textContent = count; if (count <= 0) { clearInterval(inactivityCountdown); setTimeout(() => inactivityToast.classList.remove('show'), 500); } }, 1000);
 });
-
 socket.on('train:inactivity-stop', () => {
-  inactivityToast.classList.remove('show');
-  clearInterval(inactivityCountdown);
-  setSpeed(0);
-  hornOff();
+  inactivityToast.classList.remove('show'); clearInterval(inactivityCountdown); setSpeed(0); hornOff();
   inactivityToast.textContent = '⏸ Train stopped — move throttle to resume';
   inactivityToast.classList.add('show');
-  setTimeout(() => {
-    inactivityToast.classList.remove('show');
-    inactivityToast.innerHTML =
-      '⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s';
-  }, 3000);
+  setTimeout(() => { inactivityToast.classList.remove('show'); inactivityToast.innerHTML = '⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s'; }, 3000);
 });
-
 socket.on('ping', () => socket.emit('pong'));
 
-// Init
 setControlsEnabled(false);
 updateHandlePosition();
 piDot.className = 'dot red';
