@@ -450,16 +450,33 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 // ── Stream config ─────────────────────────────────────────────────
+// Desktop: WebRTC (lowest latency, highest quality)
+// Mobile WiFi: HLS 1080p
+// Mobile cellular: HLS 480p (low bandwidth)
 const STREAMS = {
   layout: {
-    whep: 'https://webrtc.bigtrainset.com/layout/whep',
-    hls:  'https://stream.bigtrainset.com/layout/index.m3u8',
+    whep:      'https://webrtc.bigtrainset.com/layout/whep',
+    hls:       'https://stream.bigtrainset.com/layout/index.m3u8',
+    hlsMobile: 'https://stream.bigtrainset.com/layoutlow/index.m3u8',
   },
   cab: {
-    whep: 'https://webrtc.bigtrainset.com/cab/whep',
-    hls:  'https://stream.bigtrainset.com/cab/index.m3u8',
+    whep:      'https://webrtc.bigtrainset.com/cab/whep',
+    hls:       'https://stream.bigtrainset.com/cab/index.m3u8',
+    hlsMobile: 'https://stream.bigtrainset.com/cab/index.m3u8',
   }
 };
+
+// ── Detect connection type ────────────────────────────────────────
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+const isSlowConnection = connection && (
+  connection.saveData ||
+  connection.effectiveType === '2g' ||
+  connection.effectiveType === 'slow-2g' ||
+  connection.effectiveType === '3g'
+);
+// Use low quality stream on mobile cellular or slow connections
+const useLowQuality = isMobile || isSlowConnection;
 
 // ── WHEP WebRTC player ────────────────────────────────────────────
 async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCount) {
@@ -479,7 +496,6 @@ async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCoun
       }
     ],
     bundlePolicy: 'max-bundle',
-    iceTransportPolicy: 'all',
   });
 
   const ms = new MediaStream();
@@ -512,17 +528,14 @@ async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCoun
   try {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-
     const resp = await fetch(whepUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/sdp' },
       body: pc.localDescription.sdp,
     });
-
     if (!resp.ok) throw new Error('WHEP ' + resp.status);
     const sdp = await resp.text();
     await pc.setRemoteDescription({ type: 'answer', sdp });
-
   } catch (err) {
     console.warn('WebRTC failed, falling back to HLS:', err.message);
     pc.close();
@@ -570,10 +583,6 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
 }
 
 // ── Start streams ─────────────────────────────────────────────────
-// Mobile devices use HLS — more reliable on cellular networks
-// Desktop uses WebRTC — lowest latency
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
 const layoutVideo   = document.getElementById('layoutVideo');
 const layoutBadge   = document.getElementById('layoutBadge');
 const layoutOffline = document.getElementById('layoutOffline');
@@ -581,10 +590,12 @@ const cabVideo      = document.getElementById('cabVideo');
 const cabBadge      = document.getElementById('cabBadge');
 const cabOffline    = document.getElementById('cabOffline');
 
-if (isMobile) {
-  setupHLS(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.hls);
-  setupHLS(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.hls);
+if (useLowQuality) {
+  // Mobile / slow connection — use low bandwidth HLS streams
+  setupHLS(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.hlsMobile);
+  setupHLS(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.hlsMobile);
 } else {
+  // Desktop / fast connection — use WebRTC with HLS fallback
   setupWHEP(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.whep, STREAMS.layout.hls);
   setupWHEP(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.whep,    STREAMS.cab.hls);
 }
