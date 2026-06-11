@@ -750,18 +750,133 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+  
 // ── Stream URLs ───────────────────────────────────────────────────
-// WebRTC for lowest latency, HLS as fallback
-const STREAMS = {
-  layout: {
-    webrtc: 'https://webrtc.bigtrainset.com/layout',
-    hls:    'https://stream.bigtrainset.com/layout/index.m3u8',
-  },
-  cab: {
-    webrtc: 'https://webrtc.bigtrainset.com/cab',
-    hls:    'https://stream.bigtrainset.com/cab/index.m3u8',
-  }
+const WHEP_URLS = {
+  layout: 'https://webrtc.bigtrainset.com/layout/whep',
+  cab:    'https://webrtc.bigtrainset.com/cab/whep',
 };
+
+const HLS_URLS = {
+  layout: 'https://stream.bigtrainset.com/layout/index.m3u8',
+  cab:    'https://stream.bigtrainset.com/cab/index.m3u8',
+};
+
+// ── WHEP WebRTC player ────────────────────────────────────────────
+async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl) {
+  try {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    // Add receive-only transceivers
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+
+    // When we get the stream, attach to video element
+    pc.ontrack = (event) => {
+      if (event.track.kind === 'video') {
+        if (!videoEl.srcObject) {
+          videoEl.srcObject = new MediaStream();
+        }
+        videoEl.srcObject.addTrack(event.track);
+        videoEl.play().catch(() => {
+          // Autoplay blocked — mute and retry
+          videoEl.muted = true;
+          videoEl.play();
+        });
+        badgeEl.classList.add('visible');
+        offlineEl.style.display = 'none';
+      }
+    };
+
+    // Handle connection failure
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        console.warn('WebRTC connection lost, retrying in 3s...');
+        badgeEl.classList.remove('visible');
+        pc.close();
+        setTimeout(() => setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl), 3000);
+      }
+    };
+
+    // Create offer
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // Send offer to MediaMTX WHEP endpoint
+    const response = await fetch(whepUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: offer.sdp,
+    });
+
+    if (!response.ok) throw new Error(`WHEP error: ${response.status}`);
+
+    const answerSdp = await response.text();
+    await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+    console.log(`WebRTC connected: ${whepUrl}`);
+
+  } catch (err) {
+    console.warn('WebRTC failed, falling back to HLS:', err);
+    offlineEl.style.display = 'block';
+    setupHLS(videoEl, badgeEl, offlineEl, hlsUrl);
+  }
+}
+
+// ── HLS fallback ──────────────────────────────────────────────────
+function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
+  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+    const hls = new Hls({
+      lowLatencyMode: true,
+      backBufferLength: 5,
+      liveSyncDurationCount: 2,
+    });
+    hls.loadSource(hlsUrl);
+    hls.attachMedia(videoEl);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      videoEl.muted = true;
+      videoEl.play();
+      badgeEl.classList.add('visible');
+      offlineEl.style.display = 'none';
+    });
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        badgeEl.classList.remove('visible');
+        setTimeout(() => setupHLS(videoEl, badgeEl, offlineEl, hlsUrl), 5000);
+      }
+    });
+  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    videoEl.src = hlsUrl;
+    videoEl.muted = true;
+    videoEl.play();
+    badgeEl.classList.add('visible');
+    offlineEl.style.display = 'none';
+  }
+}
+
+// ── Add HLS.js for fallback ───────────────────────────────────────
+const hlsScript = document.createElement('script');
+hlsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js';
+hlsScript.onload = () => console.log('HLS.js loaded');
+document.head.appendChild(hlsScript);
+
+// ── Initialise streams on page load ──────────────────────────────
+window.addEventListener('load', () => {
+  const layoutVideo   = document.getElementById('layoutVideo');
+  const layoutBadge   = document.getElementById('layoutBadge');
+  const layoutOffline = document.getElementById('layoutOffline');
+  const cabVideo      = document.getElementById('cabVideo');
+  const cabBadge      = document.getElementById('cabBadge');
+  const cabOffline    = document.getElementById('cabOffline');
+
+  setupWHEP(layoutVideo, layoutBadge, layoutOffline,
+    WHEP_URLS.layout, HLS_URLS.layout);
+
+  setupWHEP(cabVideo, cabBadge, cabOffline,
+    WHEP_URLS.cab, HLS_URLS.cab);
+});
 
 // ── Camera setup ──────────────────────────────────────────────────
 function setupStream(videoEl, badgeEl, offlineEl, urls) {
