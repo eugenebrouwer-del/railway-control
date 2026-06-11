@@ -465,8 +465,21 @@ const STREAMS = {
 async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCount) {
   retryCount = retryCount || 0;
   const pc = new RTCPeerConnection({
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+          'turns:openrelay.metered.ca:443'
+        ],
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
+    ],
     bundlePolicy: 'max-bundle',
+    iceTransportPolicy: 'all',
   });
 
   const ms = new MediaStream();
@@ -518,7 +531,7 @@ async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCoun
   }
 }
 
-// ── HLS fallback ──────────────────────────────────────────────────
+// ── HLS player ────────────────────────────────────────────────────
 function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
   videoEl.srcObject = null;
   if (typeof Hls !== 'undefined' && Hls.isSupported()) {
@@ -545,6 +558,7 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
       }
     });
   } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari native HLS
     videoEl.src = hlsUrl;
     videoEl.muted = true;
     videoEl.play();
@@ -555,19 +569,25 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
   }
 }
 
-// Start both streams immediately
-setupWHEP(
-  document.getElementById('layoutVideo'),
-  document.getElementById('layoutBadge'),
-  document.getElementById('layoutOffline'),
-  STREAMS.layout.whep, STREAMS.layout.hls
-);
-setupWHEP(
-  document.getElementById('cabVideo'),
-  document.getElementById('cabBadge'),
-  document.getElementById('cabOffline'),
-  STREAMS.cab.whep, STREAMS.cab.hls
-);
+// ── Start streams ─────────────────────────────────────────────────
+// Mobile devices use HLS — more reliable on cellular networks
+// Desktop uses WebRTC — lowest latency
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+const layoutVideo   = document.getElementById('layoutVideo');
+const layoutBadge   = document.getElementById('layoutBadge');
+const layoutOffline = document.getElementById('layoutOffline');
+const cabVideo      = document.getElementById('cabVideo');
+const cabBadge      = document.getElementById('cabBadge');
+const cabOffline    = document.getElementById('cabOffline');
+
+if (isMobile) {
+  setupHLS(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.hls);
+  setupHLS(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.hls);
+} else {
+  setupWHEP(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.whep, STREAMS.layout.hls);
+  setupWHEP(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.whep,    STREAMS.cab.hls);
+}
 
 // ── Train control state ───────────────────────────────────────────
 let speed = 0, direction = 'fwd', isMyTurn = false, lightsOn = false;
@@ -775,14 +795,22 @@ socket.on('queue:full', () => { showOverlay(overlayWaiting); overlayWaitMsg.text
 socket.on('queue:estop', () => { setSpeed(0); hornOff(); isMyTurn = false; setControlsEnabled(false); });
 socket.on('queue:notactive', () => { isMyTurn = false; setControlsEnabled(false); });
 socket.on('train:update', (data) => {
-  if (!isMyTurn) { speed = data.speed; direction = data.direction; updateHandlePosition(); btnFwd.className = 'dir-btn' + (direction === 'fwd' ? ' active-fwd' : ''); btnRev.className = 'dir-btn' + (direction === 'rev' ? ' active-rev' : ''); speedNum.textContent = speed; }
+  if (!isMyTurn) {
+    speed = data.speed; direction = data.direction; updateHandlePosition();
+    btnFwd.className = 'dir-btn' + (direction === 'fwd' ? ' active-fwd' : '');
+    btnRev.className = 'dir-btn' + (direction === 'rev' ? ' active-rev' : '');
+    speedNum.textContent = speed;
+  }
 });
 socket.on('train:inactivity-warning', (data) => {
   let count = data.secondsLeft || 10;
   inactivityCount.textContent = count;
   inactivityToast.classList.add('show');
   clearInterval(inactivityCountdown);
-  inactivityCountdown = setInterval(() => { count--; inactivityCount.textContent = count; if (count <= 0) { clearInterval(inactivityCountdown); setTimeout(() => inactivityToast.classList.remove('show'), 500); } }, 1000);
+  inactivityCountdown = setInterval(() => {
+    count--; inactivityCount.textContent = count;
+    if (count <= 0) { clearInterval(inactivityCountdown); setTimeout(() => inactivityToast.classList.remove('show'), 500); }
+  }, 1000);
 });
 socket.on('train:inactivity-stop', () => {
   inactivityToast.classList.remove('show'); clearInterval(inactivityCountdown); setSpeed(0); hornOff();
