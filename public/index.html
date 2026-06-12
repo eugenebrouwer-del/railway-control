@@ -40,150 +40,57 @@
       gap: 12px;
       flex-shrink: 0;
     }
-    header h1 {
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: .05em;
-      color: var(--amber);
-      flex: 1;
-    }
+    header h1 { font-size: 1rem; font-weight: 700; letter-spacing: .05em; color: var(--amber); flex: 1; }
     .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      background: #0d0d0f;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px 10px;
-      font-size: .72rem;
-      color: var(--muted);
+      display: flex; align-items: center; gap: 5px;
+      background: #0d0d0f; border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 10px;
+      font-size: .72rem; color: var(--muted);
     }
-    .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--muted);
-      transition: background .4s;
-    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background .4s; }
     .dot.green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
     .dot.red    { background: var(--red);   box-shadow: 0 0 6px var(--red); }
     .dot.amber  { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      overflow: hidden;
-    }
-    .cameras {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      padding: 6px;
-      overflow: hidden;
-    }
+    main { flex: 1; display: grid; grid-template-columns: 1fr 320px; overflow: hidden; }
+    .cameras { display: flex; flex-direction: column; gap: 3px; padding: 6px; overflow: hidden; }
     .cam-box {
-      flex: 1;
-      background: #050507;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      flex: 1; background: #050507;
+      border: 1px solid var(--border); border-radius: 6px;
+      overflow: hidden; position: relative;
+      display: flex; align-items: center; justify-content: center;
     }
-    .cam-box video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-      background: #000;
-    }
+    .cam-box video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
     .cam-label {
-      position: absolute;
-      top: 6px; left: 8px;
-      font-size: .65rem;
-      color: var(--muted);
-      background: rgba(0,0,0,.6);
-      padding: 2px 7px;
-      border-radius: 10px;
-      letter-spacing: .06em;
-      z-index: 2;
-      pointer-events: none;
+      position: absolute; top: 6px; left: 8px;
+      font-size: .65rem; color: var(--muted);
+      background: rgba(0,0,0,.6); padding: 2px 7px;
+      border-radius: 10px; letter-spacing: .06em;
+      z-index: 2; pointer-events: none;
     }
-    .cam-offline {
-      color: var(--muted);
-      font-size: .8rem;
-      text-align: center;
-      position: absolute;
-      pointer-events: none;
-    }
+    .cam-offline { color: var(--muted); font-size: .8rem; text-align: center; position: absolute; pointer-events: none; }
     .stream-badge {
-      position: absolute;
-      top: 6px; right: 8px;
-      font-size: .6rem;
-      color: var(--green);
-      background: rgba(0,0,0,.6);
-      border: 1px solid var(--green);
-      padding: 2px 7px;
-      border-radius: 10px;
-      letter-spacing: .06em;
-      z-index: 2;
-      opacity: 0;
-      transition: opacity .3s;
-      pointer-events: none;
+      position: absolute; top: 6px; right: 8px;
+      font-size: .6rem; color: var(--green);
+      background: rgba(0,0,0,.6); border: 1px solid var(--green);
+      padding: 2px 7px; border-radius: 10px; letter-spacing: .06em;
+      z-index: 2; opacity: 0; transition: opacity .3s; pointer-events: none;
     }
     .stream-badge.visible { opacity: 1; }
     .controls {
-      background: var(--surface);
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      padding: 10px;
-      gap: 8px;
-      overflow-y: auto;
+      background: var(--surface); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 10px; gap: 8px; overflow-y: auto;
     }
     .driver-info {
-      background: #0d0d0f;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 12px;
-      text-align: center;
-      min-height: 58px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      flex-shrink: 0;
+      background: #0d0d0f; border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 12px; text-align: center; min-height: 58px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; flex-shrink: 0;
     }
-    .driver-info .label {
-      font-size: .65rem;
-      color: var(--muted);
-      letter-spacing: .1em;
-      text-transform: uppercase;
-    }
-    .driver-info .country-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: .9rem;
-      font-weight: 600;
-    }
-    .driver-info img.flag {
-      width: 24px; height: 18px;
-      border-radius: 2px;
-      object-fit: cover;
-    }
+    .driver-info .label { font-size: .65rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+    .driver-info .country-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 600; }
+    .driver-info img.flag { width: 24px; height: 18px; border-radius: 2px; object-fit: cover; }
     .driver-info .city { font-size: .7rem; color: var(--muted); }
-    .your-turn-badge {
-      background: var(--amber);
-      color: #000;
-      font-size: .65rem;
-      font-weight: 700;
-      letter-spacing: .08em;
-      padding: 2px 8px;
-      border-radius: 10px;
-    }
+    .your-turn-badge { background: var(--amber); color: #000; font-size: .65rem; font-weight: 700; letter-spacing: .08em; padding: 2px 8px; border-radius: 10px; }
     .time-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .time-bar-wrap { flex: 1; height: 5px; background: #0d0d0f; border-radius: 3px; overflow: hidden; }
     .time-bar { height: 100%; background: var(--amber); border-radius: 3px; width: 100%; transition: width .5s linear; }
@@ -191,37 +98,15 @@
     .throttle-section { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
     .throttle-header { font-size: .65rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; align-self: flex-start; }
     .throttle-row { display: flex; align-items: center; gap: 14px; width: 100%; justify-content: center; }
-    .throttle-track-wrap {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: var(--track-h);
-      user-select: none;
-      touch-action: none;
-    }
-    .throttle-track {
-      width: 10px; height: 100%;
-      background: #0d0d0f;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      position: relative;
-      cursor: pointer;
-    }
+    .throttle-track-wrap { position: relative; display: flex; flex-direction: column; align-items: center; height: var(--track-h); user-select: none; touch-action: none; }
+    .throttle-track { width: 10px; height: 100%; background: #0d0d0f; border: 1px solid var(--border); border-radius: 5px; position: relative; cursor: pointer; }
     .throttle-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 5px; transition: height .05s, background .3s; }
     .throttle-handle {
-      position: absolute;
-      left: 50%;
-      transform: translate(-50%, 50%);
-      width: calc(var(--handle-r) * 2);
-      height: calc(var(--handle-r) * 2);
-      background: #d0d0e0;
-      border-radius: 50%;
-      border: 3px solid #888;
-      cursor: grab;
-      transition: box-shadow .15s, background .3s;
-      display: flex; align-items: center; justify-content: center;
-      bottom: 0; z-index: 2;
+      position: absolute; left: 50%; transform: translate(-50%, 50%);
+      width: calc(var(--handle-r) * 2); height: calc(var(--handle-r) * 2);
+      background: #d0d0e0; border-radius: 50%; border: 3px solid #888;
+      cursor: grab; transition: box-shadow .15s, background .3s;
+      display: flex; align-items: center; justify-content: center; bottom: 0; z-index: 2;
     }
     .throttle-handle:active { cursor: grabbing; }
     .throttle-handle::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #666; }
@@ -229,47 +114,19 @@
     .notch { display: flex; align-items: center; gap: 4px; font-size: .6rem; color: var(--muted); }
     .notch::before { content: ''; display: block; width: 6px; height: 1px; background: var(--border); }
     .throttle-btns { display: flex; flex-direction: column; gap: 8px; }
-    .th-btn {
-      background: #0d0d0f;
-      border: 1px solid var(--border);
-      color: var(--text);
-      width: 36px; height: 36px;
-      border-radius: 8px;
-      font-size: 1.1rem;
-      cursor: pointer;
-      transition: background .15s, border-color .15s;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .th-btn { background: #0d0d0f; border: 1px solid var(--border); color: var(--text); width: 36px; height: 36px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: background .15s, border-color .15s; display: flex; align-items: center; justify-content: center; }
     .th-btn:active { background: var(--amber-dim); border-color: var(--amber); }
     .speed-readout { text-align: center; }
     .speed-num { font-size: 2.6rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; transition: color .3s; }
     .speed-unit { font-size: .65rem; color: var(--muted); letter-spacing: .1em; }
     .dir-row { display: flex; gap: 8px; flex-shrink: 0; }
-    .dir-btn {
-      flex: 1; height: 40px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: #0d0d0f;
-      color: var(--muted);
-      font-size: .8rem; font-weight: 700; letter-spacing: .1em;
-      cursor: pointer; transition: all .15s;
-    }
+    .dir-btn { flex: 1; height: 40px; border-radius: 8px; border: 1px solid var(--border); background: #0d0d0f; color: var(--muted); font-size: .8rem; font-weight: 700; letter-spacing: .1em; cursor: pointer; transition: all .15s; }
     .dir-btn.active-fwd { background: rgba(76,175,80,.15); border-color: var(--green); color: var(--green); }
     .dir-btn.active-rev { background: rgba(229,57,53,.15); border-color: var(--red); color: var(--red); }
     .fn-section { flex-shrink: 0; }
     .fn-header { font-size: .65rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
     .fn-row { display: flex; gap: 8px; }
-    .fn-btn {
-      flex: 1; height: 52px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #0d0d0f;
-      color: var(--muted);
-      font-size: .75rem; font-weight: 700; letter-spacing: .06em;
-      cursor: pointer; transition: all .15s;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 4px; line-height: 1;
-    }
+    .fn-btn { flex: 1; height: 52px; border-radius: 10px; border: 1px solid var(--border); background: #0d0d0f; color: var(--muted); font-size: .75rem; font-weight: 700; letter-spacing: .06em; cursor: pointer; transition: all .15s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; line-height: 1; }
     .fn-btn .fn-icon { font-size: 1.3rem; }
     .fn-btn.lights-on { background: rgba(255,235,59,.12); border-color: var(--yellow); color: var(--yellow); box-shadow: 0 0 12px rgba(255,235,59,.2); }
     .fn-btn.horn-active { background: rgba(245,166,35,.2); border-color: var(--amber); color: var(--amber); box-shadow: 0 0 14px rgba(245,166,35,.35); transform: scale(0.97); }
@@ -277,43 +134,18 @@
     .queue-section .q-row { display: flex; justify-content: space-between; color: var(--muted); margin-bottom: 3px; }
     .queue-section .q-row:last-child { margin-bottom: 0; }
     .queue-section .q-row span { color: var(--text); font-weight: 600; }
-    .estop-btn {
-      width: 100%; height: 44px;
-      background: rgba(229,57,53,.1);
-      border: 1px solid #6b1e1e;
-      border-radius: 8px;
-      color: #f44;
-      font-size: .85rem; font-weight: 700; letter-spacing: .12em;
-      cursor: pointer; text-transform: uppercase; transition: all .15s;
-      flex-shrink: 0;
-    }
+    .estop-btn { width: 100%; height: 44px; background: rgba(229,57,53,.1); border: 1px solid #6b1e1e; border-radius: 8px; color: #f44; font-size: .85rem; font-weight: 700; letter-spacing: .12em; cursor: pointer; text-transform: uppercase; transition: all .15s; flex-shrink: 0; }
     .estop-btn:hover { background: rgba(229,57,53,.25); border-color: var(--red); }
     .estop-btn:active { background: rgba(229,57,53,.4); }
-    .overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.7);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 100; opacity: 0; pointer-events: none; transition: opacity .3s;
-    }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .3s; }
     .overlay.visible { opacity: 1; pointer-events: auto; }
     .overlay-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 36px; text-align: center; max-width: 300px; }
     .overlay-box .icon { font-size: 2.5rem; margin-bottom: 8px; }
     .overlay-box h2 { font-size: 1.2rem; margin-bottom: 6px; }
     .overlay-box p { font-size: .82rem; color: var(--muted); }
-    .toast {
-      position: fixed; bottom: 20px; left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: #3d2a00; border: 1px solid var(--amber); color: var(--amber);
-      padding: 10px 20px; border-radius: 8px;
-      font-size: .82rem; font-weight: 600; text-align: center;
-      z-index: 99; transition: transform .3s; white-space: nowrap;
-    }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #3d2a00; border: 1px solid var(--amber); color: var(--amber); padding: 10px 20px; border-radius: 8px; font-size: .82rem; font-weight: 600; text-align: center; z-index: 99; transition: transform .3s; white-space: nowrap; }
     .toast.show { transform: translateX(-50%) translateY(0); }
-    .controls-disabled .throttle-track,
-    .controls-disabled .throttle-handle,
-    .controls-disabled .dir-btn,
-    .controls-disabled .th-btn,
-    .controls-disabled .fn-btn { opacity: .35; pointer-events: none; }
+    .controls-disabled .throttle-track, .controls-disabled .throttle-handle, .controls-disabled .dir-btn, .controls-disabled .th-btn, .controls-disabled .fn-btn { opacity: .35; pointer-events: none; }
     @media (max-width: 640px) {
       main { grid-template-columns: 1fr; grid-template-rows: 38% 1fr; }
       .cameras { flex-direction: row; }
@@ -330,9 +162,7 @@
     <div class="dot" id="piDot"></div>
     <span id="piLabel">Pi offline</span>
   </div>
-  <div class="status-pill">
-    👁 <span id="viewerCount">—</span>
-  </div>
+  <div class="status-pill">👁 <span id="viewerCount">—</span></div>
 </header>
 
 <main>
@@ -449,34 +279,113 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ── Stream config ─────────────────────────────────────────────────
-// Desktop: WebRTC (lowest latency, highest quality)
-// Mobile WiFi: HLS 1080p
-// Mobile cellular: HLS 480p (low bandwidth)
+// ── Device / connection detection ─────────────────────────────────
+const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isAndroid = /Android/i.test(navigator.userAgent);
+const isMobile  = isIOS || isAndroid;
+const conn      = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+const isSlow    = conn && (conn.saveData || ['2g','slow-2g','3g'].includes(conn.effectiveType));
+const useLow    = isMobile || isSlow;  // use low-bandwidth stream
+
+// ── Stream URLs ───────────────────────────────────────────────────
 const STREAMS = {
   layout: {
-    whep:      'https://webrtc.bigtrainset.com/layout/whep',
-    hls:       'https://stream.bigtrainset.com/layout/index.m3u8',
-    hlsMobile: 'https://stream.bigtrainset.com/layoutlow/index.m3u8',
+    whep:   'https://webrtc.bigtrainset.com/layout/whep',
+    hls:    'https://stream.bigtrainset.com/layout/index.m3u8',
+    hlsLow: 'https://stream.bigtrainset.com/layoutlow/index.m3u8',
   },
   cab: {
-    whep:      'https://webrtc.bigtrainset.com/cab/whep',
-    hls:       'https://stream.bigtrainset.com/cab/index.m3u8',
-    hlsMobile: 'https://stream.bigtrainset.com/cab/index.m3u8',
+    whep:   'https://webrtc.bigtrainset.com/cab/whep',
+    hls:    'https://stream.bigtrainset.com/cab/index.m3u8',
+    hlsLow: 'https://stream.bigtrainset.com/cab/index.m3u8',
   }
 };
 
-// ── Detect connection type ────────────────────────────────────────
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-const isSlowConnection = connection && (
-  connection.saveData ||
-  connection.effectiveType === '2g' ||
-  connection.effectiveType === 'slow-2g' ||
-  connection.effectiveType === '3g'
-);
-// Use low quality stream on mobile cellular or slow connections
-const useLowQuality = isMobile || isSlowConnection;
+// ── iOS native HLS ────────────────────────────────────────────────
+// iOS Safari has its own HLS engine — HLS.js not needed or supported
+function setupIOSNative(videoEl, badgeEl, offlineEl, hlsUrl) {
+  videoEl.srcObject = null;
+  videoEl.src = hlsUrl;
+  videoEl.muted = true;
+  videoEl.autoplay = true;
+  videoEl.playsInline = true;
+  videoEl.load();
+
+  videoEl.addEventListener('loadedmetadata', () => {
+    videoEl.play().then(() => {
+      badgeEl.classList.add('visible');
+      offlineEl.style.display = 'none';
+    }).catch(() => {
+      // Autoplay blocked — show tap to play
+      offlineEl.textContent = 'Tap to play ▶';
+      offlineEl.style.display = 'block';
+      offlineEl.style.cursor = 'pointer';
+      offlineEl.onclick = () => {
+        videoEl.play();
+        badgeEl.classList.add('visible');
+        offlineEl.style.display = 'none';
+      };
+    });
+  });
+
+  videoEl.addEventListener('error', () => {
+    badgeEl.classList.remove('visible');
+    setTimeout(() => setupIOSNative(videoEl, badgeEl, offlineEl, hlsUrl), 5000);
+  });
+
+  // Poll for stall — iOS sometimes stops without firing error
+  let lastTime = 0;
+  const stallCheck = setInterval(() => {
+    if (!videoEl.paused && videoEl.currentTime === lastTime) {
+      console.warn('iOS stream stalled, reloading...');
+      clearInterval(stallCheck);
+      videoEl.load();
+      videoEl.play().catch(() => {});
+    }
+    lastTime = videoEl.currentTime;
+  }, 8000);
+}
+
+// ── HLS.js player (Android + desktop fallback) ───────────────────
+function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
+  videoEl.srcObject = null;
+
+  if (isIOS) {
+    setupIOSNative(videoEl, badgeEl, offlineEl, hlsUrl);
+    return;
+  }
+
+  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+    const hls = new Hls({
+      lowLatencyMode: true,
+      backBufferLength: 2,
+      liveSyncDurationCount: 1,
+      liveMaxLatencyDurationCount: 2,
+      liveSyncDuration: 0.5,
+      manifestLoadingMaxRetry: 10,
+      manifestLoadingRetryDelay: 2000,
+    });
+    hls.loadSource(hlsUrl);
+    hls.attachMedia(videoEl);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      videoEl.muted = true;
+      videoEl.play();
+      badgeEl.classList.add('visible');
+      offlineEl.style.display = 'none';
+    });
+    hls.on(Hls.Events.ERROR, (e, data) => {
+      if (data.fatal) {
+        badgeEl.classList.remove('visible');
+        hls.destroy();
+        setTimeout(() => setupHLS(videoEl, badgeEl, offlineEl, hlsUrl), 5000);
+      }
+    });
+  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    setupIOSNative(videoEl, badgeEl, offlineEl, hlsUrl);
+  } else {
+    offlineEl.textContent = 'Browser not supported';
+  }
+}
 
 // ── WHEP WebRTC player ────────────────────────────────────────────
 async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCount) {
@@ -486,11 +395,7 @@ async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCoun
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       {
-        urls: [
-          'turn:openrelay.metered.ca:80',
-          'turn:openrelay.metered.ca:443',
-          'turns:openrelay.metered.ca:443'
-        ],
+        urls: ['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turns:openrelay.metered.ca:443'],
         username: 'openrelayproject',
         credential: 'openrelayproject'
       }
@@ -539,48 +444,7 @@ async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCoun
   } catch (err) {
     console.warn('WebRTC failed, falling back to HLS:', err.message);
     pc.close();
-    offlineEl.textContent = 'Connecting…';
     setupHLS(videoEl, badgeEl, offlineEl, hlsUrl);
-  }
-}
-
-// ── HLS player ────────────────────────────────────────────────────
-function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
-  videoEl.srcObject = null;
-  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-const hls = new Hls({
-      lowLatencyMode: true,
-      backBufferLength: 2,
-      liveSyncDurationCount: 1,
-      liveMaxLatencyDurationCount: 2,
-      liveSyncDuration: 0.5,
-      manifestLoadingMaxRetry: 10,
-      manifestLoadingRetryDelay: 2000,
-    });
-    hls.loadSource(hlsUrl);
-    hls.attachMedia(videoEl);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      videoEl.muted = true;
-      videoEl.play();
-      badgeEl.classList.add('visible');
-      offlineEl.style.display = 'none';
-    });
-    hls.on(Hls.Events.ERROR, (e, data) => {
-      if (data.fatal) {
-        badgeEl.classList.remove('visible');
-        hls.destroy();
-        setTimeout(() => setupHLS(videoEl, badgeEl, offlineEl, hlsUrl), 5000);
-      }
-    });
-  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari native HLS
-    videoEl.src = hlsUrl;
-    videoEl.muted = true;
-    videoEl.play();
-    badgeEl.classList.add('visible');
-    offlineEl.style.display = 'none';
-  } else {
-    offlineEl.textContent = 'Browser not supported';
   }
 }
 
@@ -592,20 +456,19 @@ const cabVideo      = document.getElementById('cabVideo');
 const cabBadge      = document.getElementById('cabBadge');
 const cabOffline    = document.getElementById('cabOffline');
 
-if (useLowQuality) {
-  // Mobile / slow connection — use low bandwidth HLS streams
-  setupHLS(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.hlsMobile);
-  setupHLS(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.hlsMobile);
+if (useLow) {
+  // Mobile / slow — low bandwidth HLS (iOS gets native player, Android gets HLS.js)
+  setupHLS(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.hlsLow);
+  setupHLS(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.hlsLow);
 } else {
-  // Desktop / fast connection — use WebRTC with HLS fallback
+  // Desktop — WebRTC with HLS fallback
   setupWHEP(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.whep, STREAMS.layout.hls);
   setupWHEP(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.whep,    STREAMS.cab.hls);
 }
 
-// ── Train control state ───────────────────────────────────────────
+// ── Train control ─────────────────────────────────────────────────
 let speed = 0, direction = 'fwd', isMyTurn = false, lightsOn = false;
 let slotEndTime = 0, timerTick = null, inactivityCountdown = null, hornSound = null;
-const SLOT_MS = 120_000;
 const socket = io();
 
 const piDot            = document.getElementById('piDot');
@@ -655,14 +518,13 @@ function startHorn() {
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass'; filter.frequency.value = 900; filter.Q.value = 1.2;
     const delay = ctx.createDelay(0.05); delay.delayTime.value = 0.03;
-    const delayGain = ctx.createGain(); delayGain.gain.value = 0.18;
-    master.connect(delay); delay.connect(delayGain); delayGain.connect(filter);
+    const dg = ctx.createGain(); dg.gain.value = 0.18;
+    master.connect(delay); delay.connect(dg); dg.connect(filter);
     master.connect(filter); filter.connect(ctx.destination);
     const oscs = HORN_FREQS.map((freq, i) => {
-      const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.value = freq + (i % 2 === 0 ? 1.5 : -1.5);
-      const g = ctx.createGain(); g.gain.value = 0.6 / HORN_FREQS.length;
+      const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+      osc.frequency.value = freq + (i%2===0 ? 1.5 : -1.5);
+      const g = ctx.createGain(); g.gain.value = 0.6/HORN_FREQS.length;
       osc.connect(g); g.connect(master); osc.start(); return osc;
     });
     hornSound = { ctx, master, oscs };
@@ -671,171 +533,145 @@ function startHorn() {
 function stopHorn() {
   if (!hornSound) return;
   try {
-    const { ctx, master, oscs } = hornSound;
+    const {ctx,master,oscs} = hornSound;
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
-    master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
-    setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch(e){} }); ctx.close(); }, 300);
+    master.gain.linearRampToValueAtTime(0, ctx.currentTime+0.25);
+    setTimeout(() => { oscs.forEach(o=>{try{o.stop()}catch(e){}}); ctx.close(); }, 300);
   } catch(e) {}
   hornSound = null;
 }
-function hornOn()  { if (!isMyTurn) return; btnHorn.classList.add('horn-active'); startHorn(); socket.emit('train:function', { fn: 'horn', state: true }); }
-function hornOff() { btnHorn.classList.remove('horn-active'); stopHorn(); if (isMyTurn) socket.emit('train:function', { fn: 'horn', state: false }); }
-btnHorn.addEventListener('pointerdown', (e) => { e.preventDefault(); hornOn(); });
+function hornOn()  { if (!isMyTurn) return; btnHorn.classList.add('horn-active'); startHorn(); socket.emit('train:function',{fn:'horn',state:true}); }
+function hornOff() { btnHorn.classList.remove('horn-active'); stopHorn(); if (isMyTurn) socket.emit('train:function',{fn:'horn',state:false}); }
+btnHorn.addEventListener('pointerdown', e => { e.preventDefault(); hornOn(); });
 btnHorn.addEventListener('pointerup',   () => hornOff());
 btnHorn.addEventListener('pointerleave',() => hornOff());
-btnHorn.addEventListener('contextmenu', (e) => e.preventDefault());
+btnHorn.addEventListener('contextmenu', e => e.preventDefault());
 
-// ── Lights ────────────────────────────────────────────────────────
 btnLights.addEventListener('click', () => {
   if (!isMyTurn) return;
   lightsOn = !lightsOn;
   btnLights.classList.toggle('lights-on', lightsOn);
   lightsLabel.textContent = lightsOn ? 'LIGHTS ON' : 'LIGHTS OFF';
-  socket.emit('train:function', { fn: 'lights', state: lightsOn });
+  socket.emit('train:function',{fn:'lights',state:lightsOn});
 });
 
-// ── Throttle ──────────────────────────────────────────────────────
 function updateHandlePosition() {
   const h = throttleTrack.getBoundingClientRect().height;
-  const pct = speed / 100;
-  throttleHandle.style.bottom = (pct * (h - 2)) + 'px';
-  throttleFill.style.height = (pct * 100) + '%';
-  const color = speed === 0 ? '#333' : speed < 35 ? '#4caf50' : speed < 70 ? '#f5a623' : '#e53935';
-  throttleFill.style.background = color;
-  throttleHandle.style.background = speed === 0 ? '#d0d0e0' : color;
-  throttleHandle.style.boxShadow = speed > 0 ? '0 0 10px ' + color + '88' : '';
-  speedNum.style.color = color;
+  const pct = speed/100;
+  throttleHandle.style.bottom = (pct*(h-2))+'px';
+  throttleFill.style.height = (pct*100)+'%';
+  const c = speed===0?'#333':speed<35?'#4caf50':speed<70?'#f5a623':'#e53935';
+  throttleFill.style.background = c;
+  throttleHandle.style.background = speed===0?'#d0d0e0':c;
+  throttleHandle.style.boxShadow = speed>0?'0 0 10px '+c+'88':'';
+  speedNum.style.color = c;
 }
 function setSpeed(v) {
-  speed = Math.max(0, Math.min(100, v));
+  speed = Math.max(0,Math.min(100,v));
   speedNum.textContent = speed;
   updateHandlePosition();
-  if (isMyTurn) socket.emit('train:control', { speed, direction });
+  if (isMyTurn) socket.emit('train:control',{speed,direction});
 }
 let dragging = false;
-throttleHandle.addEventListener('pointerdown', (e) => { if (!isMyTurn) return; dragging = true; throttleHandle.setPointerCapture(e.pointerId); e.preventDefault(); });
-document.addEventListener('pointermove', (e) => { if (!dragging || !isMyTurn) return; const r = throttleTrack.getBoundingClientRect(); setSpeed(Math.round(Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height)) * 100)); });
-document.addEventListener('pointerup', () => { dragging = false; });
-throttleTrack.addEventListener('pointerdown', (e) => { if (!isMyTurn || e.target === throttleHandle) return; const r = throttleTrack.getBoundingClientRect(); setSpeed(Math.round(Math.max(0, Math.min(1, (r.bottom - e.clientY) / r.height)) * 100)); });
-btnUp.addEventListener('click',   () => { if (isMyTurn) setSpeed(speed + 5); });
-btnDown.addEventListener('click', () => { if (isMyTurn) setSpeed(speed - 5); });
-document.addEventListener('keydown', (e) => {
+throttleHandle.addEventListener('pointerdown', e => { if (!isMyTurn) return; dragging=true; throttleHandle.setPointerCapture(e.pointerId); e.preventDefault(); });
+document.addEventListener('pointermove', e => { if (!dragging||!isMyTurn) return; const r=throttleTrack.getBoundingClientRect(); setSpeed(Math.round(Math.max(0,Math.min(1,(r.bottom-e.clientY)/r.height))*100)); });
+document.addEventListener('pointerup', () => { dragging=false; });
+throttleTrack.addEventListener('pointerdown', e => { if (!isMyTurn||e.target===throttleHandle) return; const r=throttleTrack.getBoundingClientRect(); setSpeed(Math.round(Math.max(0,Math.min(1,(r.bottom-e.clientY)/r.height))*100)); });
+btnUp.addEventListener('click',   () => { if (isMyTurn) setSpeed(speed+5); });
+btnDown.addEventListener('click', () => { if (isMyTurn) setSpeed(speed-5); });
+document.addEventListener('keydown', e => {
   if (!isMyTurn) return;
-  if (e.key === 'ArrowUp')    { e.preventDefault(); setSpeed(speed + 5); }
-  if (e.key === 'ArrowDown')  { e.preventDefault(); setSpeed(speed - 5); }
-  if (e.key === 'ArrowLeft')  { e.preventDefault(); setDir('rev'); }
-  if (e.key === 'ArrowRight') { e.preventDefault(); setDir('fwd'); }
-  if (e.key === ' ')          { e.preventDefault(); setSpeed(0); }
-  if (e.key === 'h' || e.key === 'H') hornOn();
-  if (e.key === 'l' || e.key === 'L') btnLights.click();
+  if (e.key==='ArrowUp')    { e.preventDefault(); setSpeed(speed+5); }
+  if (e.key==='ArrowDown')  { e.preventDefault(); setSpeed(speed-5); }
+  if (e.key==='ArrowLeft')  { e.preventDefault(); setDir('rev'); }
+  if (e.key==='ArrowRight') { e.preventDefault(); setDir('fwd'); }
+  if (e.key===' ')          { e.preventDefault(); setSpeed(0); }
+  if (e.key==='h'||e.key==='H') hornOn();
+  if (e.key==='l'||e.key==='L') btnLights.click();
 });
-document.addEventListener('keyup', (e) => { if (e.key === 'h' || e.key === 'H') hornOff(); });
+document.addEventListener('keyup', e => { if (e.key==='h'||e.key==='H') hornOff(); });
 
-// ── Direction ─────────────────────────────────────────────────────
 function setDir(dir) {
-  direction = dir;
-  btnFwd.className = 'dir-btn' + (dir === 'fwd' ? ' active-fwd' : '');
-  btnRev.className = 'dir-btn' + (dir === 'rev' ? ' active-rev' : '');
-  if (isMyTurn) socket.emit('train:control', { speed, direction });
+  direction=dir;
+  btnFwd.className='dir-btn'+(dir==='fwd'?' active-fwd':'');
+  btnRev.className='dir-btn'+(dir==='rev'?' active-rev':'');
+  if (isMyTurn) socket.emit('train:control',{speed,direction});
 }
 btnFwd.addEventListener('click', () => { if (isMyTurn) setDir('fwd'); });
 btnRev.addEventListener('click', () => { if (isMyTurn) setDir('rev'); });
 estopBtn.addEventListener('click', () => { if (!isMyTurn) return; setSpeed(0); hornOff(); });
 
-// ── Time bar ──────────────────────────────────────────────────────
 function startTimeBar(durationMs, msLeft) {
-  slotEndTime = Date.now() + msLeft;
+  slotEndTime = Date.now()+msLeft;
   clearInterval(timerTick);
-  timeRow.style.display = 'flex';
+  timeRow.style.display='flex';
   timerTick = setInterval(() => {
-    const left = slotEndTime - Date.now();
-    if (left <= 0) { clearInterval(timerTick); timeRow.style.display = 'none'; return; }
-    timeBar.style.width = (left / durationMs * 100) + '%';
-    timeBar.style.background = left < 15000 ? '#e53935' : '#f5a623';
-    const s = Math.ceil(left / 1000);
-    timeLabel.textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+    const left = slotEndTime-Date.now();
+    if (left<=0) { clearInterval(timerTick); timeRow.style.display='none'; return; }
+    timeBar.style.width=(left/durationMs*100)+'%';
+    timeBar.style.background=left<15000?'#e53935':'#f5a623';
+    const s=Math.ceil(left/1000);
+    timeLabel.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   }, 500);
 }
 
-// ── Driver info ───────────────────────────────────────────────────
 function showDriver(country, isMe) {
-  if (!country || country.code === 'XX') {
-    driverLabel.textContent = 'Now driving';
-    driverCountryRow.style.display = 'none';
-    driverCity.textContent = '';
-    return;
-  }
-  driverLabel.innerHTML = isMe ? '<span class="your-turn-badge">YOU ARE DRIVING</span>' : 'Now driving';
-  driverFlag.src = 'https://flagcdn.com/32x24/' + country.code.toLowerCase() + '.png';
-  driverFlag.onerror = () => { driverFlag.style.display = 'none'; };
-  driverFlag.style.display = '';
-  driverCountry.textContent = country.name;
-  driverCountryRow.style.display = 'flex';
-  driverCity.textContent = country.city || '';
+  if (!country||country.code==='XX') { driverLabel.textContent='Now driving'; driverCountryRow.style.display='none'; driverCity.textContent=''; return; }
+  driverLabel.innerHTML=isMe?'<span class="your-turn-badge">YOU ARE DRIVING</span>':'Now driving';
+  driverFlag.src='https://flagcdn.com/32x24/'+country.code.toLowerCase()+'.png';
+  driverFlag.onerror=()=>{driverFlag.style.display='none';}; driverFlag.style.display='';
+  driverCountry.textContent=country.name; driverCountryRow.style.display='flex'; driverCity.textContent=country.city||'';
 }
 
-// ── Overlays ──────────────────────────────────────────────────────
 function showOverlay(el, ms) {
-  [overlayWaiting, overlayYourTurn, overlaySlotEnded, overlayPiOffline].forEach(o => o.classList.remove('visible'));
+  [overlayWaiting,overlayYourTurn,overlaySlotEnded,overlayPiOffline].forEach(o=>o.classList.remove('visible'));
   el.classList.add('visible');
-  if (ms) setTimeout(() => el.classList.remove('visible'), ms);
+  if (ms) setTimeout(()=>el.classList.remove('visible'),ms);
 }
 function setControlsEnabled(on) {
-  controlPanel.classList.toggle('controls-disabled', !on);
-  if (!on) { lightsOn = false; btnLights.classList.remove('lights-on'); lightsLabel.textContent = 'LIGHTS OFF'; hornOff(); }
-  else [overlayWaiting, overlayYourTurn, overlaySlotEnded, overlayPiOffline].forEach(o => o.classList.remove('visible'));
+  controlPanel.classList.toggle('controls-disabled',!on);
+  if (!on) { lightsOn=false; btnLights.classList.remove('lights-on'); lightsLabel.textContent='LIGHTS OFF'; hornOff(); }
+  else [overlayWaiting,overlayYourTurn,overlaySlotEnded,overlayPiOffline].forEach(o=>o.classList.remove('visible'));
 }
 
-// ── Socket events ─────────────────────────────────────────────────
-socket.on('pi:connected', () => { piDot.className = 'dot green'; piLabel.textContent = 'Pi online'; overlayPiOffline.classList.remove('visible'); });
-socket.on('pi:disconnected', () => { piDot.className = 'dot red'; piLabel.textContent = 'Pi offline'; showOverlay(overlayPiOffline); setControlsEnabled(false); });
-socket.on('queue:active', (data) => { isMyTurn = true; setControlsEnabled(true); showOverlay(overlayYourTurn, 2500); showDriver(data.country, true); startTimeBar(data.durationMs, data.durationMs); setSpeed(0); });
-socket.on('queue:slotended', () => { isMyTurn = false; setControlsEnabled(false); clearInterval(timerTick); timeRow.style.display = 'none'; setSpeed(0); showOverlay(overlaySlotEnded, 3000); });
-socket.on('queue:state', (data) => {
-  viewerCount.textContent = data.viewerCount;
-  const pos = data.myPosition, len = data.queueLength;
-  const wait = data.activeId ? ((pos-1)*2 + Math.ceil((data.msLeft||120000)/60000)) : (pos-1)*2;
-  qPos.textContent = '#' + pos; qLen.textContent = len; qWait.textContent = wait > 0 ? '~' + wait + ' min' : 'Soon';
+socket.on('pi:connected', () => { piDot.className='dot green'; piLabel.textContent='Pi online'; overlayPiOffline.classList.remove('visible'); });
+socket.on('pi:disconnected', () => { piDot.className='dot red'; piLabel.textContent='Pi offline'; showOverlay(overlayPiOffline); setControlsEnabled(false); });
+socket.on('queue:active', data => { isMyTurn=true; setControlsEnabled(true); showOverlay(overlayYourTurn,2500); showDriver(data.country,true); startTimeBar(data.durationMs,data.durationMs); setSpeed(0); });
+socket.on('queue:slotended', () => { isMyTurn=false; setControlsEnabled(false); clearInterval(timerTick); timeRow.style.display='none'; setSpeed(0); showOverlay(overlaySlotEnded,3000); });
+socket.on('queue:state', data => {
+  viewerCount.textContent=data.viewerCount;
+  const pos=data.myPosition, len=data.queueLength;
+  const wait=data.activeId?((pos-1)*2+Math.ceil((data.msLeft||120000)/60000)):(pos-1)*2;
+  qPos.textContent='#'+pos; qLen.textContent=len; qWait.textContent=wait>0?'~'+wait+' min':'Soon';
   if (!isMyTurn) {
-    if (data.activeDriver) showDriver(data.activeDriver, false);
-    else { driverCountryRow.style.display = 'none'; driverLabel.textContent = 'No active driver'; }
-    overlayWaitMsg.textContent = 'Position ' + pos + ' of ' + len;
-    if (!overlayYourTurn.classList.contains('visible') && !overlaySlotEnded.classList.contains('visible') && !overlayPiOffline.classList.contains('visible')) showOverlay(overlayWaiting);
+    if (data.activeDriver) showDriver(data.activeDriver,false);
+    else { driverCountryRow.style.display='none'; driverLabel.textContent='No active driver'; }
+    overlayWaitMsg.textContent='Position '+pos+' of '+len;
+    if (!overlayYourTurn.classList.contains('visible')&&!overlaySlotEnded.classList.contains('visible')&&!overlayPiOffline.classList.contains('visible')) showOverlay(overlayWaiting);
   }
 });
-socket.on('queue:full', () => { showOverlay(overlayWaiting); overlayWaitMsg.textContent = 'Queue is full — please try again later.'; });
-socket.on('queue:estop', () => { setSpeed(0); hornOff(); isMyTurn = false; setControlsEnabled(false); });
-socket.on('queue:notactive', () => { isMyTurn = false; setControlsEnabled(false); });
-socket.on('train:update', (data) => {
-  if (!isMyTurn) {
-    speed = data.speed; direction = data.direction; updateHandlePosition();
-    btnFwd.className = 'dir-btn' + (direction === 'fwd' ? ' active-fwd' : '');
-    btnRev.className = 'dir-btn' + (direction === 'rev' ? ' active-rev' : '');
-    speedNum.textContent = speed;
-  }
+socket.on('queue:full', () => { showOverlay(overlayWaiting); overlayWaitMsg.textContent='Queue is full — please try again later.'; });
+socket.on('queue:estop', () => { setSpeed(0); hornOff(); isMyTurn=false; setControlsEnabled(false); });
+socket.on('queue:notactive', () => { isMyTurn=false; setControlsEnabled(false); });
+socket.on('train:update', data => {
+  if (!isMyTurn) { speed=data.speed; direction=data.direction; updateHandlePosition(); btnFwd.className='dir-btn'+(direction==='fwd'?' active-fwd':''); btnRev.className='dir-btn'+(direction==='rev'?' active-rev':''); speedNum.textContent=speed; }
 });
-socket.on('train:inactivity-warning', (data) => {
-  let count = data.secondsLeft || 10;
-  inactivityCount.textContent = count;
-  inactivityToast.classList.add('show');
+socket.on('train:inactivity-warning', data => {
+  let count=data.secondsLeft||10; inactivityCount.textContent=count; inactivityToast.classList.add('show');
   clearInterval(inactivityCountdown);
-  inactivityCountdown = setInterval(() => {
-    count--; inactivityCount.textContent = count;
-    if (count <= 0) { clearInterval(inactivityCountdown); setTimeout(() => inactivityToast.classList.remove('show'), 500); }
-  }, 1000);
+  inactivityCountdown=setInterval(()=>{ count--; inactivityCount.textContent=count; if(count<=0){clearInterval(inactivityCountdown);setTimeout(()=>inactivityToast.classList.remove('show'),500);}},1000);
 });
 socket.on('train:inactivity-stop', () => {
   inactivityToast.classList.remove('show'); clearInterval(inactivityCountdown); setSpeed(0); hornOff();
-  inactivityToast.textContent = '⏸ Train stopped — move throttle to resume';
-  inactivityToast.classList.add('show');
-  setTimeout(() => { inactivityToast.classList.remove('show'); inactivityToast.innerHTML = '⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s'; }, 3000);
+  inactivityToast.textContent='⏸ Train stopped — move throttle to resume'; inactivityToast.classList.add('show');
+  setTimeout(()=>{ inactivityToast.classList.remove('show'); inactivityToast.innerHTML='⚠ No input detected — train stopping in <span id="inactivityCount">10</span>s'; },3000);
 });
 socket.on('ping', () => socket.emit('pong'));
 
 setControlsEnabled(false);
 updateHandlePosition();
-piDot.className = 'dot red';
+piDot.className='dot red';
 </script>
 </body>
 </html>
