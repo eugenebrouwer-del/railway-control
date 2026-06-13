@@ -210,28 +210,36 @@ const STREAMS = {
   }
 };
 
-// ── Twilio TURN ICE servers ───────────────────────────────────────
-// Note: Twilio credentials expire every 24h
-// TODO: fetch fresh credentials from server endpoint
-const TWILIO_TURN = {
-  urls: [
-    'turn:global.turn.twilio.com:3478?transport=udp',
-    'turn:global.turn.twilio.com:3478?transport=tcp',
-    'turn:global.turn.twilio.com:443?transport=tcp'
-  ],
-  username: 'fb07607d3a5b51b9d810afc29af56b906c9a18a33e7699775351a701f4c50b6d',
-  credential: 'PsVuQDYk6uCn81QGUkL/IT7okLk8QDLEktXWgvpHsNY='
-};
-
-const ICE_SERVERS = [
-  { urls: 'stun:global.stun.twilio.com:3478' },
-  TWILIO_TURN
+// ── Fallback ICE servers (used if /api/turn fails) ────────────────
+const FALLBACK_ICE = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' }
 ];
 
-// ── HLS.js fallback player ────────────────────────────────────────
+// ── Fetch fresh TURN credentials from server ──────────────────────
+// Credentials are fetched fresh on page load — no expiry issues
+async function getICEServers() {
+  try {
+    const resp = await fetch('/api/turn');
+    if (!resp.ok) throw new Error('turn API ' + resp.status);
+    const data = await resp.json();
+    // On mobile, prefer TCP 443 only — works on all cellular networks
+    if (isMobile) {
+      return data.iceServers.filter(s =>
+        !s.url ||
+        (typeof s.url === 'string' && (s.url.includes('stun') || s.url.includes('443')))
+      );
+    }
+    return data.iceServers;
+  } catch (e) {
+    console.warn('TURN fetch failed, using fallback STUN:', e.message);
+    return FALLBACK_ICE;
+  }
+}
+
+// ── HLS fallback player ────────────────────────────────────────────
 function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
   videoEl.srcObject = null;
-  videoEl.style.display = 'block';
 
   if (typeof Hls !== 'undefined' && Hls.isSupported()) {
     const hls = new Hls({
@@ -271,10 +279,14 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
 // ── WHEP WebRTC with Twilio TURN ──────────────────────────────────
 async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCount) {
   retryCount = retryCount || 0;
-  videoEl.style.display = 'block';
+
+  // Fetch fresh ICE servers on first attempt
+  const iceServers = retryCount === 0
+    ? await getICEServers()
+    : FALLBACK_ICE;
 
   const pc = new RTCPeerConnection({
-    iceServers: ICE_SERVERS,
+    iceServers,
     bundlePolicy: 'max-bundle',
   });
 
@@ -319,14 +331,11 @@ async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCoun
   } catch (err) {
     console.warn('WebRTC failed, falling back to HLS:', err.message);
     pc.close();
-    // Mobile falls back to low quality HLS, desktop to full quality
     setupHLS(videoEl, badgeEl, offlineEl, hlsUrl);
   }
 }
 
 // ── Start streams ─────────────────────────────────────────────────
-// All platforms now use WebRTC with Twilio TURN for sub-second latency
-// Falls back to HLS if WebRTC fails
 const layoutVideo   = document.getElementById('layoutVideo');
 const layoutBadge   = document.getElementById('layoutBadge');
 const layoutOffline = document.getElementById('layoutOffline');
@@ -335,7 +344,8 @@ const cabBadge      = document.getElementById('cabBadge');
 const cabOffline    = document.getElementById('cabOffline');
 
 if (isMobile || isSlow) {
-  // Mobile — WebRTC with Twilio TURN, falls back to low quality HLS
+  // Mobile — WebRTC with Twilio TURN (TCP 443 only for cellular)
+  // Falls back to low quality HLS if WebRTC fails
   setupWHEP(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.whep, STREAMS.layout.hlsLow);
   setupWHEP(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.whep,    STREAMS.cab.hlsLow);
 } else {
