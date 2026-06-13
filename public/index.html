@@ -14,7 +14,6 @@
       --amber-dim:#8a5e14;
       --green:    #4caf50;
       --red:      #e53935;
-      --blue:     #2196f3;
       --yellow:   #ffeb3b;
       --text:     #e8e8f0;
       --muted:    #6b6b7e;
@@ -34,7 +33,6 @@
     .cameras { display: flex; flex-direction: column; gap: 3px; padding: 6px; overflow: hidden; }
     .cam-box { flex: 1; background: #050507; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; }
     .cam-box video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
-    .cam-box img.mjpeg { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
     .cam-label { position: absolute; top: 6px; left: 8px; font-size: .65rem; color: var(--muted); background: rgba(0,0,0,.6); padding: 2px 7px; border-radius: 10px; letter-spacing: .06em; z-index: 2; pointer-events: none; }
     .cam-offline { color: var(--muted); font-size: .8rem; text-align: center; position: absolute; pointer-events: none; }
     .stream-badge { position: absolute; top: 6px; right: 8px; font-size: .6rem; color: var(--green); background: rgba(0,0,0,.6); border: 1px solid var(--green); padding: 2px 7px; border-radius: 10px; letter-spacing: .06em; z-index: 2; opacity: 0; transition: opacity .3s; pointer-events: none; }
@@ -197,7 +195,6 @@ const isAndroid = /Android/i.test(navigator.userAgent);
 const isMobile  = isIOS || isAndroid;
 const conn      = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 const isSlow    = conn && (conn.saveData || ['2g','slow-2g','3g'].includes(conn.effectiveType));
-const useLow    = isMobile || isSlow;
 
 // ── Stream URLs ───────────────────────────────────────────────────
 const STREAMS = {
@@ -205,51 +202,33 @@ const STREAMS = {
     whep:   'https://webrtc.bigtrainset.com/layout/whep',
     hls:    'https://stream.bigtrainset.com/layout/index.m3u8',
     hlsLow: 'https://stream.bigtrainset.com/layoutlow/index.m3u8',
-    mjpeg:  'https://mjpeg.bigtrainset.com/layout',
   },
   cab: {
     whep:   'https://webrtc.bigtrainset.com/cab/whep',
     hls:    'https://stream.bigtrainset.com/cab/index.m3u8',
     hlsLow: 'https://stream.bigtrainset.com/cab/index.m3u8',
-    mjpeg:  'https://mjpeg.bigtrainset.com/cab',
   }
 };
 
-// ── iOS MJPEG player — near-zero latency ─────────────────────────
-// iOS Safari plays MJPEG natively in an img tag with no buffering
-function setupMJPEG(videoEl, badgeEl, offlineEl, mjpegUrl) {
-  const parent = videoEl.parentElement;
-  videoEl.style.display = 'none';
+// ── Twilio TURN ICE servers ───────────────────────────────────────
+// Note: Twilio credentials expire every 24h
+// TODO: fetch fresh credentials from server endpoint
+const TWILIO_TURN = {
+  urls: [
+    'turn:global.turn.twilio.com:3478?transport=udp',
+    'turn:global.turn.twilio.com:3478?transport=tcp',
+    'turn:global.turn.twilio.com:443?transport=tcp'
+  ],
+  username: 'fb07607d3a5b51b9d810afc29af56b906c9a18a33e7699775351a701f4c50b6d',
+  credential: 'PsVuQDYk6uCn81QGUkL/IT7okLk8QDLEktXWgvpHsNY='
+};
 
-  const img = document.createElement('img');
-  img.className = 'mjpeg';
-  img.alt = '';
-  parent.appendChild(img);
+const ICE_SERVERS = [
+  { urls: 'stun:global.stun.twilio.com:3478' },
+  TWILIO_TURN
+];
 
-  let retryTimer = null;
-
-  function load() {
-    // Cache-bust to force fresh stream
-    img.src = mjpegUrl + '?t=' + Date.now();
-  }
-
-  img.onload = () => {
-    badgeEl.classList.add('visible');
-    offlineEl.style.display = 'none';
-    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
-  };
-
-  img.onerror = () => {
-    badgeEl.classList.remove('visible');
-    offlineEl.textContent = 'Reconnecting…';
-    offlineEl.style.display = 'block';
-    retryTimer = setTimeout(load, 3000);
-  };
-
-  load();
-}
-
-// ── HLS.js player (Android + desktop fallback) ───────────────────
+// ── HLS.js fallback player ────────────────────────────────────────
 function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
   videoEl.srcObject = null;
   videoEl.style.display = 'block';
@@ -279,7 +258,6 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
       }
     });
   } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari fallback native HLS
     videoEl.src = hlsUrl;
     videoEl.muted = true;
     videoEl.play();
@@ -290,17 +268,13 @@ function setupHLS(videoEl, badgeEl, offlineEl, hlsUrl) {
   }
 }
 
-// ── WHEP WebRTC ───────────────────────────────────────────────────
+// ── WHEP WebRTC with Twilio TURN ──────────────────────────────────
 async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCount) {
   retryCount = retryCount || 0;
   videoEl.style.display = 'block';
 
   const pc = new RTCPeerConnection({
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: ['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turns:openrelay.metered.ca:443'], username: 'openrelayproject', credential: 'openrelayproject' }
-    ],
+    iceServers: ICE_SERVERS,
     bundlePolicy: 'max-bundle',
   });
 
@@ -334,18 +308,25 @@ async function setupWHEP(videoEl, badgeEl, offlineEl, whepUrl, hlsUrl, retryCoun
   try {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    const resp = await fetch(whepUrl, { method:'POST', headers:{'Content-Type':'application/sdp'}, body: pc.localDescription.sdp });
+    const resp = await fetch(whepUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: pc.localDescription.sdp
+    });
     if (!resp.ok) throw new Error('WHEP ' + resp.status);
     const sdp = await resp.text();
-    await pc.setRemoteDescription({ type:'answer', sdp });
+    await pc.setRemoteDescription({ type: 'answer', sdp });
   } catch (err) {
     console.warn('WebRTC failed, falling back to HLS:', err.message);
     pc.close();
+    // Mobile falls back to low quality HLS, desktop to full quality
     setupHLS(videoEl, badgeEl, offlineEl, hlsUrl);
   }
 }
 
 // ── Start streams ─────────────────────────────────────────────────
+// All platforms now use WebRTC with Twilio TURN for sub-second latency
+// Falls back to HLS if WebRTC fails
 const layoutVideo   = document.getElementById('layoutVideo');
 const layoutBadge   = document.getElementById('layoutBadge');
 const layoutOffline = document.getElementById('layoutOffline');
@@ -353,16 +334,12 @@ const cabVideo      = document.getElementById('cabVideo');
 const cabBadge      = document.getElementById('cabBadge');
 const cabOffline    = document.getElementById('cabOffline');
 
-if (isIOS) {
-  // iPhone/iPad — MJPEG for near-zero latency, native Safari support
-  setupMJPEG(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.mjpeg);
-  setupMJPEG(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.mjpeg);
-} else if (useLow) {
-  // Android / slow connection — HLS
-  setupHLS(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.hlsLow);
-  setupHLS(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.hlsLow);
+if (isMobile || isSlow) {
+  // Mobile — WebRTC with Twilio TURN, falls back to low quality HLS
+  setupWHEP(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.whep, STREAMS.layout.hlsLow);
+  setupWHEP(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.whep,    STREAMS.cab.hlsLow);
 } else {
-  // Desktop — WebRTC with HLS fallback
+  // Desktop — WebRTC with Twilio TURN, falls back to full quality HLS
   setupWHEP(layoutVideo, layoutBadge, layoutOffline, STREAMS.layout.whep, STREAMS.layout.hls);
   setupWHEP(cabVideo,    cabBadge,    cabOffline,    STREAMS.cab.whep,    STREAMS.cab.hls);
 }
