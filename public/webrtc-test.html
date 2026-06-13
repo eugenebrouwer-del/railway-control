@@ -46,8 +46,11 @@ async function runTest() {
   try {
     const resp = await fetch(TURN_API);
     const data = await resp.json();
-    iceServers = data.iceServers;
-    log('TURN credentials fetched: ' + iceServers.length + ' servers', 'ok');
+// Force TCP 443 only on mobile — cellular blocks UDP TURN
+iceServers = data.iceServers.filter(s => {
+  const url = s.url || '';
+  return url.includes('stun') || url.includes('443');
+});    log('TURN credentials fetched: ' + iceServers.length + ' servers', 'ok');
     iceServers.forEach(s => {
       const url = s.url || (Array.isArray(s.urls) ? s.urls[0] : s.urls);
       log('  ICE: ' + url + (s.username ? ' (auth)' : ''), 'info');
