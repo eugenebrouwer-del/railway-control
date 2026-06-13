@@ -5,6 +5,7 @@
  *          + multi-Pi support (main Pi + cab Pi)
  *          + camera frames removed — now served directly via WebRTC/HLS
  *            from home streaming server (stream.bigtrainset.com)
+ *          + /api/turn endpoint — serves fresh Twilio TURN credentials
  */
 
 const express = require('express');
@@ -25,17 +26,51 @@ app.use(express.static('public'));
 // ── Configuration ─────────────────────────────────────────────────
 const PI_SECRET          = process.env.PI_SECRET    || 'xK9mQ2vR8nL4pJ7w';
 const ADMIN_TOKEN        = process.env.ADMIN_TOKEN  || 'changeme';
+const TWILIO_SID         = process.env.TWILIO_SID   || 'ACf7280aea2dcd5c64ba20e51994871ac6';
+const TWILIO_TOKEN       = process.env.TWILIO_TOKEN || 'c0c1dbb2e7457d1d6c0c813694012451';
 const SLOT_DURATION_MS   = 120_000;   // 2 minutes per driver
 const INACTIVITY_MS      = 60_000;    // stop train after 1 min of no commands
 const INACTIVITY_WARN_MS = 50_000;    // warn driver at 50 s (10 s before stop)
 const MAX_QUEUE          = 20;
 const STATS_FILE         = path.join(__dirname, 'stats.json');
 
+// ── Twilio TURN credentials cache ─────────────────────────────────
+// Twilio tokens expire every 24h — cache and refresh automatically
+let turnCache = null;
+let turnCacheTime = 0;
+const TURN_CACHE_MS = 20 * 60 * 60 * 1000; // refresh every 20h
+
+async function getTwilioTURN() {
+  const now = Date.now();
+  if (turnCache && (now - turnCacheTime) < TURN_CACHE_MS) {
+    return turnCache;
+  }
+  try {
+    const auth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString('base64');
+    const resp = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Tokens.json`,
+      { method: 'POST', headers: { 'Authorization': `Basic ${auth}` } }
+    );
+    if (!resp.ok) throw new Error(`Twilio API ${resp.status}`);
+    const data = await resp.json();
+    turnCache = data.ice_servers;
+    turnCacheTime = now;
+    console.log('[turn] Refreshed Twilio TURN credentials');
+    return turnCache;
+  } catch (err) {
+    console.error('[turn] Failed to fetch Twilio credentials:', err.message);
+    return null;
+  }
+}
+
+// Pre-fetch on startup
+getTwilioTURN();
+
 // ── Persistent stats ──────────────────────────────────────────────
 let stats = {
   totalVisitors:   0,
   totalDrivingMs:  0,
-  countryCounts:   {},   // { 'AU': 42, 'US': 31, … }
+  countryCounts:   {},
   sessionStart:    new Date().toISOString()
 };
 
@@ -52,7 +87,7 @@ function saveStats() {
   try { fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2)); }
   catch (e) { console.error('Stats save failed:', e.message); }
 }
-setInterval(saveStats, 5 * 60_000); // persist every 5 min
+setInterval(saveStats, 5 * 60_000);
 
 // ── Country lookup helpers ────────────────────────────────────────
 const COUNTRY_NAMES = {
@@ -85,13 +120,12 @@ function countryFromSocket(socket) {
 }
 
 // ── Runtime state ─────────────────────────────────────────────────
-const piSockets  = new Map();          // deviceId → socket  e.g. 'main', 'cab'
-let queue        = [];                 // ordered array of visitor socket objects
-let activeSlot   = null;              // { socketId, startTime, timers… }
+const piSockets  = new Map();
+let queue        = [];
+let activeSlot   = null;
 let currentTrain = { speed: 0, direction: 'fwd' };
 let viewers      = 0;
 
-// Helper to get the main Pi socket
 function mainPi() { return piSockets.get('main') || null; }
 
 // ── Queue helpers ─────────────────────────────────────────────────
@@ -204,7 +238,6 @@ io.on('connection', (socket) => {
   const isPi = socket.handshake.auth?.secret === PI_SECRET;
 
   if (!isPi) {
-    // Visitor
     socket.country = countryFromSocket(socket);
     stats.totalVisitors++;
     stats.countryCounts[socket.country.code] =
@@ -222,7 +255,6 @@ io.on('connection', (socket) => {
     }, 1000);
   }
 
-  // ── Pi events ─────────────────────────────────────────────────
   socket.on('pi:register', (data) => {
     if (data?.secret !== PI_SECRET) { socket.disconnect(); return; }
     const deviceId = data.device || 'main';
@@ -234,14 +266,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // NOTE: Camera frame relay events removed.
-  // Cameras now stream directly to visitors via WebRTC/HLS
-  // from the home streaming server at stream.bigtrainset.com
-  // and webrtc.bigtrainset.com — no relay through this server needed.
-
   socket.on('pong', () => {});
 
-  // ── Visitor → train control ───────────────────────────────────
   socket.on('train:control', (data) => {
     if (!activeSlot || activeSlot.socketId !== socket.id) {
       socket.emit('queue:notactive');
@@ -260,7 +286,6 @@ io.on('connection', (socket) => {
 
   socket.on('ping', () => socket.emit('pong'));
 
-  // ── Disconnect ────────────────────────────────────────────────
   socket.on('disconnect', () => {
     let disconnectedDevice = null;
     for (const [deviceId, s] of piSockets.entries()) {
@@ -278,7 +303,6 @@ io.on('connection', (socket) => {
         broadcastQueueState();
       }
     } else {
-      // Visitor disconnected
       viewers = Math.max(0, viewers - 1);
       const idx = queue.indexOf(socket);
       if (idx !== -1) queue.splice(idx, 1);
@@ -297,6 +321,24 @@ app.get('/health', (req, res) => res.json({
   viewers,
   uptime:       process.uptime()
 }));
+
+// ── TURN credentials endpoint ─────────────────────────────────────
+// Returns fresh Twilio ICE/TURN server credentials
+// Cached for 20h, auto-refreshed before expiry
+app.get('/api/turn', async (req, res) => {
+  try {
+    const iceServers = await getTwilioTURN();
+    if (!iceServers) {
+      // Fallback STUN only if Twilio fails
+      return res.json({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    }
+    res.set('Cache-Control', 'no-store');
+    res.json({ iceServers });
+  } catch (err) {
+    console.error('[turn] endpoint error:', err.message);
+    res.status(500).json({ error: 'Failed to get TURN credentials' });
+  }
+});
 
 function requireAdmin(req, res, next) {
   if (req.headers['x-admin-token'] !== ADMIN_TOKEN)
