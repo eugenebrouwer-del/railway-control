@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Test</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 20px; font-size: 14px; }
+    h2 { color: #ff0; margin-bottom: 10px; }
+    #log { white-space: pre-wrap; }
+    .err { color: #f44; }
+    .ok  { color: #4f4; }
+    .info{ color: #4af; }
+    video { width: 100%; max-width: 640px; background: #000; display: block; margin: 10px 0; }
+    button { background: #333; color: #fff; border: 1px solid #555; padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 5px; }
+  </style>
+</head>
+<body>
+<h2>WebRTC TURN Test</h2>
+<button onclick="runTest()">Start Test</button>
+<button onclick="document.getElementById('log').textContent=''">Clear</button>
+<video id="v" autoplay muted playsinline></video>
+<div id="log"></div>
+
+<script>
+const WHEP = 'https://webrtc.bigtrainset.com/layout/whep';
+const TURN_API = '/api/turn';
+
+function log(msg, cls) {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toISOString().substr(11,8) + ' ' + msg;
+  el.appendChild(line);
+  console.log(msg);
+}
+
+async function runTest() {
+  document.getElementById('log').textContent = '';
+  log('Starting WebRTC test...', 'info');
+  log('User agent: ' + navigator.userAgent.substr(0,80), 'info');
+
+  // Step 1: Fetch TURN credentials
+  log('Fetching TURN credentials from /api/turn...', 'info');
+  let iceServers;
+  try {
+    const resp = await fetch(TURN_API);
+    const data = await resp.json();
+    iceServers = data.iceServers;
+    log('TURN credentials fetched: ' + iceServers.length + ' servers', 'ok');
+    iceServers.forEach(s => {
+      const url = s.url || (Array.isArray(s.urls) ? s.urls[0] : s.urls);
+      log('  ICE: ' + url + (s.username ? ' (auth)' : ''), 'info');
+    });
+  } catch(e) {
+    log('TURN fetch failed: ' + e.message, 'err');
+    iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+  }
+
+  // Step 2: Create PeerConnection
+  log('Creating RTCPeerConnection...', 'info');
+  const pc = new RTCPeerConnection({ iceServers, bundlePolicy: 'max-bundle' });
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      log('ICE candidate: ' + e.candidate.type + ' ' + e.candidate.protocol + ' ' + e.candidate.address, 'info');
+    } else {
+      log('ICE gathering complete', 'ok');
+    }
+  };
+
+  pc.onicegatheringstatechange = () => log('ICE gathering: ' + pc.iceGatheringState, 'info');
+  pc.oniceconnectionstatechange = () => {
+    const s = pc.iceConnectionState;
+    log('ICE connection: ' + s, s === 'connected' || s === 'completed' ? 'ok' : s === 'failed' ? 'err' : 'info');
+  };
+  pc.onconnectionstatechange = () => {
+    const s = pc.connectionState;
+    log('Connection state: ' + s, s === 'connected' ? 'ok' : s === 'failed' ? 'err' : 'info');
+  };
+
+  pc.ontrack = (evt) => {
+    log('Track received: ' + evt.track.kind, 'ok');
+    if (evt.track.kind === 'video') {
+      const ms = new MediaStream();
+      ms.addTrack(evt.track);
+      document.getElementById('v').srcObject = ms;
+      document.getElementById('v').play();
+    }
+  };
+
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'recvonly' });
+
+  // Step 3: Create offer
+  log('Creating offer...', 'info');
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    log('Local description set', 'ok');
+
+    // Step 4: Send to WHEP
+    log('Sending offer to WHEP endpoint...', 'info');
+    const resp = await fetch(WHEP, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: pc.localDescription.sdp
+    });
+    log('WHEP response: ' + resp.status, resp.ok ? 'ok' : 'err');
+
+    if (!resp.ok) {
+      log('WHEP failed: ' + await resp.text(), 'err');
+      return;
+    }
+
+    const sdp = await resp.text();
+    await pc.setRemoteDescription({ type: 'answer', sdp });
+    log('Remote description set — waiting for ICE...', 'ok');
+
+    // Timeout after 15 seconds
+    setTimeout(() => {
+      if (pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed') {
+        log('TIMEOUT: ICE never connected after 15s', 'err');
+        log('Final ICE state: ' + pc.iceConnectionState, 'err');
+        log('Final connection state: ' + pc.connectionState, 'err');
+      }
+    }, 15000);
+
+  } catch(e) {
+    log('Error: ' + e.message, 'err');
+  }
+}
+</script>
+</body>
+</html>
