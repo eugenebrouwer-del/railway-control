@@ -1,11 +1,12 @@
 /**
  * server.js — bigtrainset.com cloud server
+ * Hosted on Hetzner VPS (5.223.70.185)
  * Changes: 2-min drive slots, country detection, stats tracking,
- *          inactivity auto-stop (1 min), new admin /stats endpoint
+ *          inactivity auto-stop (1 min), admin endpoints
  *          + multi-Pi support (main Pi + cab Pi)
- *          + camera frames removed — now served directly via WebRTC/HLS
+ *          + camera frames removed — served directly via WebRTC/HLS
  *            from home streaming server (stream.bigtrainset.com)
- *          + /api/turn endpoint — serves fresh Twilio TURN credentials
+ *          + /api/turn endpoint — serves coturn TURN credentials
  */
 
 const express = require('express');
@@ -26,45 +27,27 @@ app.use(express.static('public'));
 // ── Configuration ─────────────────────────────────────────────────
 const PI_SECRET          = process.env.PI_SECRET    || 'xK9mQ2vR8nL4pJ7w';
 const ADMIN_TOKEN        = process.env.ADMIN_TOKEN  || 'changeme';
-const TWILIO_SID         = process.env.TWILIO_SID   || 'ACf7280aea2dcd5c64ba20e51994871ac6';
-const TWILIO_TOKEN       = process.env.TWILIO_TOKEN || 'c0c1dbb2e7457d1d6c0c813694012451';
 const SLOT_DURATION_MS   = 120_000;   // 2 minutes per driver
 const INACTIVITY_MS      = 60_000;    // stop train after 1 min of no commands
-const INACTIVITY_WARN_MS = 50_000;    // warn driver at 50 s (10 s before stop)
+const INACTIVITY_WARN_MS = 50_000;    // warn driver at 50s (10s before stop)
 const MAX_QUEUE          = 20;
 const STATS_FILE         = path.join(__dirname, 'stats.json');
 
-// ── Twilio TURN credentials cache ─────────────────────────────────
-// Twilio tokens expire every 24h — cache and refresh automatically
-let turnCache = null;
-let turnCacheTime = 0;
-const TURN_CACHE_MS = 20 * 60 * 60 * 1000; // refresh every 20h
-
-async function getTwilioTURN() {
-  const now = Date.now();
-  if (turnCache && (now - turnCacheTime) < TURN_CACHE_MS) {
-    return turnCache;
+// ── coturn TURN server credentials ───────────────────────────────
+// Running on this Hetzner VPS at 5.223.70.185
+// No expiry — permanent credentials
+const TURN_ICE_SERVERS = [
+  { urls: 'stun:5.223.70.185:3478' },
+  {
+    urls: [
+      'turn:5.223.70.185:3478?transport=udp',
+      'turn:5.223.70.185:3478?transport=tcp',
+      'turn:5.223.70.185:5349?transport=tcp'
+    ],
+    username:   'bigtrainset',
+    credential: 'traintime123'
   }
-  try {
-    const auth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString('base64');
-    const resp = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Tokens.json`,
-      { method: 'POST', headers: { 'Authorization': `Basic ${auth}` } }
-    );
-    if (!resp.ok) throw new Error(`Twilio API ${resp.status}`);
-    const data = await resp.json();
-    turnCache = data.ice_servers;
-    turnCacheTime = now;
-    console.log('[turn] Refreshed Twilio TURN credentials');
-    return turnCache;
-  } catch (err) {
-    console.error('[turn] Failed to fetch Twilio credentials:', err.message);
-    return null;
-  }
-}
-
-// Pre-fetch on startup
-getTwilioTURN();
+];
 
 // ── Persistent stats ──────────────────────────────────────────────
 let stats = {
@@ -323,21 +306,10 @@ app.get('/health', (req, res) => res.json({
 }));
 
 // ── TURN credentials endpoint ─────────────────────────────────────
-// Returns fresh Twilio ICE/TURN server credentials
-// Cached for 20h, auto-refreshed before expiry
-app.get('/api/turn', async (req, res) => {
-  try {
-    const iceServers = await getTwilioTURN();
-    if (!iceServers) {
-      // Fallback STUN only if Twilio fails
-      return res.json({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    }
-    res.set('Cache-Control', 'no-store');
-    res.json({ iceServers });
-  } catch (err) {
-    console.error('[turn] endpoint error:', err.message);
-    res.status(500).json({ error: 'Failed to get TURN credentials' });
-  }
+// Returns coturn ICE server credentials — no expiry, permanent
+app.get('/api/turn', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ iceServers: TURN_ICE_SERVERS });
 });
 
 function requireAdmin(req, res, next) {
