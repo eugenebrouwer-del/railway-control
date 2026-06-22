@@ -7,6 +7,13 @@
  *          + camera frames removed — served directly via WebRTC/HLS
  *            from home streaming server (stream.bigtrainset.com)
  *          + /api/turn endpoint — serves coturn TURN credentials
+ *          + freight train added (DCC 1). Passenger train is DCC 3.
+ *            Both trains are controlled by whoever holds the active
+ *            drive slot — one visitor, one slot, two trains. There is
+ *            no separate freight queue; freight just rides along on
+ *            the existing passenger queue/slot system.
+ *          + accessory:control stub for Windmill (DCC 20) / Building Lights (DCC 21)
+ *            — logs only until Massoth DIMAX USB integration is wired up on the Pi
  */
 
 const express = require('express');
@@ -27,11 +34,22 @@ app.use(express.static('public'));
 // ── Configuration ─────────────────────────────────────────────────
 const PI_SECRET          = process.env.PI_SECRET    || 'xK9mQ2vR8nL4pJ7w';
 const ADMIN_TOKEN        = process.env.ADMIN_TOKEN  || 'changeme';
-const SLOT_DURATION_MS   = 120_000;   // 2 minutes per driver
-const INACTIVITY_MS      = 60_000;    // stop train after 1 min of no commands
+const SLOT_DURATION_MS   = 120_000;   // 2 minutes per driver — covers BOTH trains
+const INACTIVITY_MS      = 60_000;    // stop trains after 1 min of no commands
 const INACTIVITY_WARN_MS = 50_000;    // warn driver at 50s (10s before stop)
 const MAX_QUEUE          = 20;
 const STATS_FILE         = path.join(__dirname, 'stats.json');
+
+// ── DCC address map ────────────────────────────────────────────────
+// Both trains are controlled by the same person during their drive slot.
+// Passenger train has the cab cam; freight does not. Accessories are
+// separate (Massoth DIMAX, not queue-gated, not yet wired up on the Pi).
+const DCC = {
+  FREIGHT_TRAIN:    1,
+  PASSENGER_TRAIN:  3,
+  WINDMILL:         20,
+  BUILDING_LIGHTS:  21
+};
 
 // ── coturn TURN server credentials ───────────────────────────────
 // Running on this Hetzner VPS at 5.223.70.185
@@ -103,15 +121,16 @@ function countryFromSocket(socket) {
 }
 
 // ── Runtime state ─────────────────────────────────────────────────
-const piSockets  = new Map();
-let queue        = [];
-let activeSlot   = null;
-let currentTrain = { speed: 0, direction: 'fwd' };
-let viewers      = 0;
+const piSockets   = new Map();
+let queue         = [];
+let activeSlot     = null;
+let currentTrain   = { dcc: DCC.PASSENGER_TRAIN, speed: 0, direction: 'fwd' };
+let currentFreight = { dcc: DCC.FREIGHT_TRAIN,   speed: 0, direction: 'fwd' };
+let viewers        = 0;
 
 function mainPi() { return piSockets.get('main') || null; }
 
-// ── Queue helpers ─────────────────────────────────────────────────
+// ── Queue helpers ──────────────────────────────────────────────────
 function broadcastQueueState() {
   const activeSocket = activeSlot
     ? io.sockets.sockets.get(activeSlot.socketId)
@@ -132,10 +151,18 @@ function broadcastQueueState() {
   });
 }
 
-function stopTrain() {
-  currentTrain = { speed: 0, direction: currentTrain.direction };
-  if (mainPi()) mainPi().emit('train:control', currentTrain);
+// Stops BOTH trains. Used for inactivity timeout, slot end, Pi disconnect,
+// and the admin e-stop — anywhere we need to guarantee nothing is left
+// running once a slot is no longer active.
+function stopAllTrains() {
+  currentTrain   = { dcc: DCC.PASSENGER_TRAIN, speed: 0, direction: currentTrain.direction };
+  currentFreight = { dcc: DCC.FREIGHT_TRAIN,   speed: 0, direction: currentFreight.direction };
+  if (mainPi()) {
+    mainPi().emit('train:control', currentTrain);
+    mainPi().emit('train:control', currentFreight);
+  }
   io.emit('train:update', currentTrain);
+  io.emit('freight:update', currentFreight);
 }
 
 function clearSlotTimers() {
@@ -159,7 +186,7 @@ function resetInactivityTimer() {
     console.log(`[slot] Inactivity timeout for ${activeSlot?.socketId}`);
     const s = io.sockets.sockets.get(activeSlot?.socketId);
     if (s) s.emit('train:inactivity-stop');
-    stopTrain();
+    stopAllTrains();
   }, INACTIVITY_MS);
 }
 
@@ -183,12 +210,15 @@ function activateNextSlot() {
 
   resetInactivityTimer();
 
+  // One slot, two trains — the driver gets control of both for the
+  // same duration. The cab cam belongs to the passenger train; freight
+  // has no camera but drives in parallel during the same window.
   socket.emit('queue:active', {
     durationMs: SLOT_DURATION_MS,
     country:    socket.country
   });
 
-  console.log(`[slot] Activated for ${socket.id} (${socket.country?.name})`);
+  console.log(`[slot] Activated for ${socket.id} (${socket.country?.name}) — controls both trains`);
   broadcastQueueState();
 }
 
@@ -200,7 +230,7 @@ function endSlot(socketId, moveToBack = false) {
 
   clearSlotTimers();
   activeSlot = null;
-  stopTrain();
+  stopAllTrains();
 
   const socket = io.sockets.sockets.get(socketId);
   if (socket) {
@@ -251,12 +281,13 @@ io.on('connection', (socket) => {
 
   socket.on('pong', () => {});
 
+  // ── Passenger train (DCC 3) — only the active slot holder ───────────────
   socket.on('train:control', (data) => {
     if (!activeSlot || activeSlot.socketId !== socket.id) {
       socket.emit('queue:notactive');
       return;
     }
-    currentTrain = { speed: data.speed, direction: data.direction };
+    currentTrain = { dcc: DCC.PASSENGER_TRAIN, speed: data.speed, direction: data.direction };
     if (mainPi()) mainPi().emit('train:control', currentTrain);
     io.emit('train:update', currentTrain);
     resetInactivityTimer();
@@ -264,7 +295,62 @@ io.on('connection', (socket) => {
 
   socket.on('train:function', (data) => {
     if (!activeSlot || activeSlot.socketId !== socket.id) return;
-    if (mainPi()) mainPi().emit('train:function', data);
+    if (mainPi()) mainPi().emit('train:function', { dcc: DCC.PASSENGER_TRAIN, ...data });
+    resetInactivityTimer();
+  });
+
+  socket.on('train:estop', () => {
+    if (!activeSlot || activeSlot.socketId !== socket.id) return;
+    stopAllTrains();
+  });
+
+  // ── Freight train (DCC 1) — same slot holder as passenger, same window ──
+  // Not a separate queue. Whoever has the active passenger slot also
+  // controls freight; their inactivity timer covers both trains.
+  socket.on('freight:control', (data) => {
+    if (!activeSlot || activeSlot.socketId !== socket.id) {
+      socket.emit('queue:notactive');
+      return;
+    }
+    const speed = Math.max(0, Math.min(100, Number(data?.speed) || 0));
+    const direction = data?.direction === 'rev' ? 'rev' : 'fwd';
+    currentFreight = { dcc: DCC.FREIGHT_TRAIN, speed, direction };
+    if (mainPi()) mainPi().emit('train:control', currentFreight);
+    io.emit('freight:update', currentFreight);
+    resetInactivityTimer();
+  });
+
+  socket.on('freight:function', (data) => {
+    if (!activeSlot || activeSlot.socketId !== socket.id) return;
+    if (mainPi()) mainPi().emit('train:function', { dcc: DCC.FREIGHT_TRAIN, ...data });
+    resetInactivityTimer();
+  });
+
+  socket.on('freight:estop', () => {
+    if (!activeSlot || activeSlot.socketId !== socket.id) return;
+    stopAllTrains();
+  });
+
+  // ── Accessories (DCC 20/21 via Massoth DIMAX) ────────────────────────────
+  // STUB: Massoth DIMAX USB integration on the Pi is not yet wired up.
+  // Accessories are NOT queue-gated — anyone can flip the windmill/lights
+  // at any time, same as originally planned, independent of drive slots.
+  // This currently just logs and echoes state back to visitors so the UI
+  // doesn't error out. Replace the console.log with an actual call to the
+  // Pi-side DIMAX driver once that's built, e.g.:
+  //   if (mainPi()) mainPi().emit('accessory:control', data);
+  // and have the Pi forward the DCC accessory packet over USB to the DIMAX.
+  socket.on('accessory:control', (data) => {
+    if (isPi) return;
+    const known = Object.values(DCC).includes(data?.dcc);
+    if (!known) {
+      console.warn('[accessory] unknown DCC address in request:', data);
+      return;
+    }
+    console.log(`[accessory:STUB] ${data.name} (DCC ${data.dcc}) -> ${data.action} — Massoth DIMAX not yet connected, no hardware action taken`);
+    io.emit('accessory:update', data);
+    // TODO once DIMAX is wired up over USB on the Pi:
+    // if (mainPi()) mainPi().emit('accessory:control', data);
   });
 
   socket.on('ping', () => socket.emit('pong'));
@@ -282,7 +368,7 @@ io.on('connection', (socket) => {
         io.emit('pi:disconnected');
         clearSlotTimers();
         activeSlot = null;
-        stopTrain();
+        stopAllTrains();
         broadcastQueueState();
       }
     } else {
@@ -302,6 +388,7 @@ app.get('/health', (req, res) => res.json({
   cabConnected: piSockets.has('cab'),
   queueLength:  queue.length,
   viewers,
+  freight:      currentFreight,
   uptime:       process.uptime()
 }));
 
@@ -319,13 +406,13 @@ function requireAdmin(req, res, next) {
 }
 
 app.post('/admin/estop', requireAdmin, (req, res) => {
-  stopTrain();
+  stopAllTrains();
   if (mainPi()) mainPi().emit('train:estop');
   io.emit('queue:estop');
   clearSlotTimers();
   activeSlot = null;
   queue = [];
-  res.json({ ok: true, message: 'ESTOP sent, queue cleared' });
+  res.json({ ok: true, message: 'ESTOP sent (both trains), queue cleared' });
 });
 
 app.get('/admin/stats', requireAdmin, (req, res) => {
@@ -347,6 +434,7 @@ app.get('/admin/stats', requireAdmin, (req, res) => {
     currentQueueLength: queue.length,
     piConnected:        piSockets.has('main'),
     cabConnected:       piSockets.has('cab'),
+    freight:            currentFreight,
     countryCounts:      countryList
   });
 });
