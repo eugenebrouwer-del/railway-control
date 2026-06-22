@@ -601,7 +601,7 @@
         <span class="card-tag">Freight Loco</span>
       </div>
       <div class="freight-status-row">
-        <span>Ambient layout train — no cab view</span>
+        <span>Included in your drive slot — no cab view</span>
         <span id="freightRunState">● Stopped</span>
       </div>
 
@@ -634,6 +634,7 @@
         </div>
         <button class="estop-btn" onclick="freightEStop()">⛔ E-STOP</button>
       </div>
+      <div class="disabled-overlay" id="freightOverlay">NOT YOUR TURN</div>
     </div>
 
     <div class="card">
@@ -853,6 +854,7 @@ socket.on('train:update', data => {
 
 function activateControls() {
   document.getElementById('throttleOverlay').style.display = 'none';
+  document.getElementById('freightOverlay').style.display = 'none';
   document.getElementById('timerWrap').style.display = 'flex';
   document.getElementById('joinBtn').textContent = '🟢 YOU\'RE DRIVING!';
   document.getElementById('joinBtn').disabled = true;
@@ -860,10 +862,16 @@ function activateControls() {
 
 function deactivateControls() {
   document.getElementById('throttleOverlay').style.display = 'flex';
+  document.getElementById('freightOverlay').style.display = 'flex';
   document.getElementById('timerWrap').style.display = 'none';
   document.getElementById('speedSlider').value = 0;
   updateSpeedDisplay(0, 'fwd');
   direction = 'fwd';
+  document.getElementById('freightSpeedSlider').value = 0;
+  onFreightSpeedChange(0);
+  freightDirection = 'fwd';
+  document.getElementById('freightBtnFwd').className = 'dir-btn active-fwd';
+  document.getElementById('freightBtnRev').className = 'dir-btn';
 }
 
 function joinQueue() {
@@ -952,7 +960,7 @@ function onFreightSpeedChange(val) {
 
 function sendFreightControl() {
   const speed = parseInt(document.getElementById('freightSpeedSlider').value);
-  socket.emit('train:control', { dcc: 1, speed, direction: freightDirection });
+  socket.emit('freight:control', { speed, direction: freightDirection });
 }
 
 function setFreightDir(d) {
@@ -963,7 +971,7 @@ function setFreightDir(d) {
 }
 
 function freightEStop() {
-  socket.emit('train:estop', { dcc: 1 });
+  socket.emit('freight:estop');
   document.getElementById('freightSpeedSlider').value = 0;
   onFreightSpeedChange(0);
 }
@@ -974,14 +982,15 @@ function toggleFreightFn(fn) {
     const btn = document.getElementById('freightBtnLights');
     btn.textContent = freightLightsState ? '💡 LIGHTS ON' : '💡 LIGHTS';
     btn.className = 'fn-btn' + (freightLightsState ? ' active' : '');
-    socket.emit('train:function', { dcc: 1, fn: 'lights', state: freightLightsState });
+    socket.emit('freight:function', { fn: 'lights', state: freightLightsState });
   }
 }
 
-function freightHornOn()  { socket.emit('train:function', { dcc: 1, fn: 'horn', state: true });  if (soundEnabled) { sounds.freightHorn.currentTime = 0; safePlay(sounds.freightHorn); } }
-function freightHornOff() { socket.emit('train:function', { dcc: 1, fn: 'horn', state: false }); sounds.freightHorn.pause(); }
+function freightHornOn()  { socket.emit('freight:function', { fn: 'horn', state: true });  if (soundEnabled) { sounds.freightHorn.currentTime = 0; safePlay(sounds.freightHorn); } }
+function freightHornOff() { socket.emit('freight:function', { fn: 'horn', state: false }); sounds.freightHorn.pause(); }
 
 socket.on('freight:update', data => {
+  if (isActive) return; // it's your slot — your own slider/buttons are the source of truth
   document.getElementById('freightSpeedSlider').value = data.speed || 0;
   onFreightSpeedChange(data.speed || 0);
   freightDirection = data.direction || 'fwd';
@@ -1110,6 +1119,7 @@ setInterval(loadWeather, 5 * 60 * 1000);
 loadMyCountry();
 
 document.getElementById('throttleOverlay').style.display = 'flex';
+document.getElementById('freightOverlay').style.display = 'flex';
 </script>
 </body>
 </html>
