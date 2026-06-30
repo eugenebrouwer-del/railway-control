@@ -541,7 +541,7 @@
 
       <div class="cam-card">
         <div class="cam-header">
-          <span class="cam-label">🚂 CAM 2 · Cab View</span>
+          <span class="cam-label">🚂 CAM 2 · Cab View (Lumus)</span>
           <div class="live-badge" id="cam2Badge"><div class="live-dot"></div> LIVE</div>
         </div>
         <div class="cam-body">
@@ -1028,7 +1028,7 @@ function stopTimer() {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 }
 
-socket.on('cam:frame', data => {
+socket.on('cam:cab_frame', data => {
   const img = document.getElementById('cam2feed');
   const off = document.getElementById('cam2offline');
   img.src = 'data:image/jpeg;base64,' + data.data;
