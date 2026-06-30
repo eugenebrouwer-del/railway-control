@@ -281,6 +281,16 @@ io.on('connection', (socket) => {
 
   socket.on('pong', () => {});
 
+  // ── Cab camera (Reolink Lumus, bridged from GEEKOM) ─────────────────────
+  // The GEEKOM bridge script registers as device "cab" via pi:register,
+  // then streams JPEG frames here. We relay them to visitors as
+  // cam:cab_frame, mirroring the cam:frame / cam:frame1 pattern already
+  // used for cam1/cam2.
+  socket.on('pi:cab_frame', (data) => {
+    if (!isPi) return; // only the registered cab device may publish frames
+    io.emit('cam:cab_frame', data);
+  });
+
   // ── Passenger train (DCC 3) — only the active slot holder ───────────────
   socket.on('train:control', (data) => {
     if (!activeSlot || activeSlot.socketId !== socket.id) {
